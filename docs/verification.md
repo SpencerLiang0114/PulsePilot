@@ -24,6 +24,20 @@ Browser tests ran at `https://painting-everybody-richardson-cape.trycloudflare.c
 
 The replay and camera browser fixtures contain generated flat-color frames. They prove transport and failure gating, not facial pulse recovery. Simulation reports carry `mode=simulation` and never stand in for real inference.
 
+## Task 1: stale-data invalidation
+
+Implemented and checked October 20, 2026. Before the fix, the new frozen-capture regression failed because `72 BPM` remained visible after 5.5 seconds despite stopped capture and an open socket.
+
+The session watchdog now checks every 250 ms for five seconds without advancing capture, transport ACKs, or advancing sample timestamps. A stale session hides BPM, leaves the stable state, stops camera tracks, closes the socket, and offers “Try again.” Simulation checks sample freshness without requiring camera frames or ACKs. The watchdog is cleared on finish, cancel/restart, failure, report, socket close, and unmount.
+
+| Check | Result | Scope |
+|---|---|---|
+| `pnpm test:e2e tests/freshness.spec.ts` | 4 passed | Local development frontend, mocked open sockets, synthetic canvas camera: frozen capture despite ongoing ACKs/samples; missing samples despite ACKs/capture; repeated sample timestamps; missing ACKs despite samples. Each case verifies BPM removal within 5.5 seconds, stopped tracks, recovery, a healthy restart lasting six seconds, and no false timeout during slow report preparation. |
+| `pnpm check` and `pnpm build` | Passed | TypeScript and production frontend build |
+| `pnpm test:e2e tests/experience.spec.ts tests/async-report.spec.ts` | 8 passed in 43.7 seconds | Local production frontend and real backend with Meta credentials disabled. Includes accelerated simulation, recording end-of-file, synthetic-camera FacePhys transport/cleanup, and mocked asynchronous report lifecycle. |
+
+These checks establish browser freshness behavior and preserve the existing synthetic-input integration coverage; they do not establish physical-camera or physiological accuracy.
+
 ## Not verified / external dependencies
 
 - **Muse Spark live access:** the user will receive a hackathon key later. The official API integration, strict response schemas, and failure paths are implemented/tested with mocked HTTP responses. No live Meta request or AI-generated report is claimed.

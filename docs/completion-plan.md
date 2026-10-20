@@ -42,6 +42,8 @@ These can proceed while tasks 1–3 are implemented:
 
 **Depends on:** none. **Scope:** `lib/use-measurement.ts`, focused browser regression tests.
 
+**Status:** completed October 20, 2026. A session-scoped watchdog checks capture, ACK, and advancing sample freshness every 250 ms against a five-second limit. Four new browser regressions and all eight existing browser tests passed; see [verification.md](verification.md#task-1-stale-data-invalidation).
+
 - Add a session-scoped freshness watchdog independent of video-frame callbacks. Distinguish capture progress, transport acknowledgements, and fresh measurement samples so ACK traffic alone cannot keep an old BPM valid.
 - Hide BPM and leave the stable state when data become stale; provide a useful recovery action. Clean up the watchdog on finish, cancel, failure, restart, and unmount.
 - Preserve recording end-of-file behavior and simulation timing.

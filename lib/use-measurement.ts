@@ -5,12 +5,16 @@ import { backendUrl, Health, Intervention, Mode, Report, Sample } from "./types"
 
 type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; file?: File };
 
+const FRESHNESS_LIMIT_MS = 5000;
+const FRESHNESS_CHECK_MS = 250;
+
 export function useMeasurement(onReport: (report: Report) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const objectUrl = useRef<string | null>(null);
   const generation = useRef(0);
+  const watchdogRef = useRef<number | null>(null);
   const onReportRef = useRef(onReport);
   const pendingReport = useRef<Report | null>(null);
   const statusRef = useRef("idle");
@@ -28,6 +32,11 @@ export function useMeasurement(onReport: (report: Report) => void) {
   onReportRef.current = onReport;
   statusRef.current = status;
 
+  const stopWatchdog = useCallback(() => {
+    if (watchdogRef.current !== null) window.clearInterval(watchdogRef.current);
+    watchdogRef.current = null;
+  }, []);
+
   const releaseCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
@@ -43,13 +52,14 @@ export function useMeasurement(onReport: (report: Report) => void) {
       pendingReport.current = null;
     }
     generation.current += 1;
+    stopWatchdog();
     socketRef.current?.close();
     socketRef.current = null;
     releaseCamera();
     setSample(null);
     setStatus("idle");
     setError(null);
-  }, [releaseCamera]);
+  }, [releaseCamera, stopWatchdog]);
 
   const refreshHealth = useCallback(async () => {
     try {
@@ -61,18 +71,19 @@ export function useMeasurement(onReport: (report: Report) => void) {
 
   useEffect(() => {
     void refreshHealth();
-    return () => { generation.current++; socketRef.current?.close(); releaseCamera(); };
-  }, [refreshHealth, releaseCamera]);
+    return () => { generation.current++; stopWatchdog(); socketRef.current?.close(); releaseCamera(); };
+  }, [refreshHealth, releaseCamera, stopWatchdog]);
 
   const finish = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
+      stopWatchdog();
       socketRef.current.send(JSON.stringify({ type: "finish" }));
       setStatus("finishing");
       statusRef.current = "finishing";
       releaseCamera();
       setSample(current => current ? { ...current, bpm: null, usable: false } : null);
     }
-  }, [releaseCamera]);
+  }, [releaseCamera, stopWatchdog]);
 
   const extend = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN)
@@ -92,17 +103,36 @@ export function useMeasurement(onReport: (report: Report) => void) {
     let receivedReport = false;
     let inFlight = 0;
     let previousFrame = -1;
+    let captureTimestamp = -1;
+    let sampleTimestamp = -1;
+    let lastCapture = performance.now();
     let lastAck = performance.now();
+    let lastSample = performance.now();
     let socket: WebSocket;
     const fail = (text: string) => {
       if (generation.current !== run) return;
       generation.current++;
+      stopWatchdog();
       setError(text);
       setStatus("error");
       statusRef.current = "error";
       setSample(null);
       releaseCamera();
       socket?.close();
+    };
+    const startWatchdog = () => {
+      lastCapture = lastAck = lastSample = performance.now();
+      stopWatchdog();
+      watchdogRef.current = window.setInterval(() => {
+        if (generation.current !== run || statusRef.current !== "measuring") return;
+        const now = performance.now();
+        if (options.mode !== "simulation" && now - lastCapture >= FRESHNESS_LIMIT_MS)
+          fail("Camera or recording frames stopped updating. Check your video source and restart.");
+        else if (options.mode !== "simulation" && now - lastAck >= FRESHNESS_LIMIT_MS)
+          fail("Frames stopped reaching the inference service. Check your connection and restart.");
+        else if (now - lastSample >= FRESHNESS_LIMIT_MS)
+          fail("Measurement updates stopped or became stale. Check the inference service and restart.");
+      }, FRESHNESS_CHECK_MS);
     };
     try {
       const url = new URL(backendUrl());
@@ -126,6 +156,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
     socket.onclose = () => {
       window.clearTimeout(connectionTimeout);
       if (generation.current !== run) return;
+      stopWatchdog();
       releaseCamera();
       if (pendingReport.current) {
         onReportRef.current({ ...pendingReport.current, ai_status: "unavailable" });
@@ -134,7 +165,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
       if (!receivedReport) fail("The connection ended before the report was ready. Please restart the measurement.");
     };
     const beginCapture = async () => {
-      if (options.mode === "simulation") return;
+      if (options.mode === "simulation") { startWatchdog(); return; }
       const video = videoRef.current;
       if (!video) throw new Error("The camera preview could not initialize.");
       if (options.mode === "recording") {
@@ -156,7 +187,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
         stream.getVideoTracks()[0].onended = () => fail("The camera was disconnected. Reconnect it and start again.");
       }
       await video.play();
-      if (generation.current !== run) return;
+      if (generation.current !== run || statusRef.current !== "measuring") return;
       setCaptureSize({ width: video.videoWidth, height: video.videoHeight });
       const canvas = document.createElement("canvas");
       const ratio = Math.min(320 / video.videoWidth, 240 / video.videoHeight, 1);
@@ -166,11 +197,11 @@ export function useMeasurement(onReport: (report: Report) => void) {
       if (!context) throw new Error("The browser could not initialize camera capture.");
       const capture = async (_now: number, metadata?: VideoFrameCallbackMetadata) => {
         if (generation.current !== run || statusRef.current !== "measuring") return;
-        if (performance.now() - lastAck > 5000) {
-          fail("Frames stopped reaching the inference service. Check your connection and restart.");
-          return;
-        }
         const timestamp = metadata?.mediaTime ?? video.currentTime;
+        if (timestamp > captureTimestamp) {
+          captureTimestamp = timestamp;
+          lastCapture = performance.now();
+        }
         if (inFlight < 4 && socket.bufferedAmount < 1_500_000 && timestamp > previousFrame && socket.readyState === WebSocket.OPEN) {
           previousFrame = timestamp;
           inFlight += 1;
@@ -188,7 +219,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
         if ("requestVideoFrameCallback" in video) video.requestVideoFrameCallback(capture);
         else requestAnimationFrame(capture);
       };
-      lastAck = performance.now();
+      startWatchdog();
       if ("requestVideoFrameCallback" in video) video.requestVideoFrameCallback(capture);
       else requestAnimationFrame(capture);
     };
@@ -207,6 +238,9 @@ export function useMeasurement(onReport: (report: Report) => void) {
             break;
           case "ack": inFlight = Math.max(0, inFlight - 1); lastAck = performance.now(); break;
           case "sample":
+            if (statusRef.current !== "measuring" || !Number.isFinite(payload.sample.t) || payload.sample.t <= sampleTimestamp) break;
+            sampleTimestamp = payload.sample.t;
+            lastSample = performance.now();
             setSample(payload.sample);
             setHistory(current => [...current, payload.sample]);
             setInterventions(payload.interventions);
@@ -214,6 +248,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
           case "coach": setInterventions(payload.interventions); break;
           case "duration": setDuration(payload.duration); break;
           case "report":
+            stopWatchdog();
             receivedReport = true;
             pendingReport.current = payload.report.ai_status === "pending" ? payload.report : null;
             releaseCamera();
@@ -229,7 +264,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
           : err instanceof Error ? err.message : "The measurement could not start.");
       }
     };
-  }, [cancel, finish, releaseCamera]);
+  }, [cancel, finish, releaseCamera, stopWatchdog]);
 
   return { videoRef, status, mode, duration, sample, history, interventions, error, message, health,
     aiStatus, captureSize, start, finish, extend, cancel, refreshHealth };
