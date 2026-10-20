@@ -1,0 +1,31 @@
+[project]
+name = "pulsepilot-backend"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "httpx>=0.28,<1",
+  "pydantic>=2.10,<3",
+  "python-dotenv>=1,<2",
+  "numpy>=2,<3",
+  "scipy>=1.14,<2",
+  "jax==0.6.2",
+  "keras==3.11.3",
+  "onnxruntime>=1.20,<2",
+  "opencv-python-headless>=4.10,<5",
+  "heartpy>=1.2,<2",
+  "einops>=0.8,<1",
+  "av>=13,<17",
+  "setuptools<81",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.25,<2", "websockets>=14,<16", "ruff>=0.12"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110

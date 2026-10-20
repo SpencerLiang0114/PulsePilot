@@ -1,0 +1,129 @@
+import importlib
+import math
+import os
+import sys
+import time
+from collections import deque
+from pathlib import Path
+
+import numpy as np
+
+from .schemas import CameraMetrics, Sample
+from .sensing import CameraSensing, ReliabilityGate
+
+ROOT = Path(os.getenv("FACEPHYS_ROOT", Path(__file__).resolve().parents[2] / ".vendor/open-rppg"))
+
+
+def weights_available() -> bool:
+    return (ROOT / "rppg/weights/FacePhys.rlap.weights.h5").is_file()
+
+
+def finite(value):
+    return float(value) if value is not None and math.isfinite(float(value)) else None
+
+
+class FacePhysEstimator:
+    def __init__(self):
+        self.model = None
+        self.start_time = None
+        self.last_timestamp = None
+        self.epoch = None
+        self.visible_since = None
+        self.timestamps = deque(maxlen=90)
+        self.sensing = CameraSensing()
+        self.camera = CameraMetrics()
+        self.gate = ReliabilityGate()
+        self.frame_count = 0
+        self.processing_ms = 0.0
+
+    def start(self):
+        if not weights_available():
+            raise RuntimeError("FacePhys weights are missing. Run uv run scripts/fetch_facephys.py.")
+        os.environ.setdefault("KERAS_BACKEND", "jax")
+        os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        rppg = importlib.import_module("rppg")
+        model = rppg.Model("FacePhys.rlap")
+        # Upstream closes detection but leaves this constructor-created executor open.
+        model.face_resampling_pool.shutdown(wait=True)
+        model.face_detection_threads = 2
+        model.face_resampling_threads = 2
+        model.__enter__()
+        self.model = model
+
+    def close(self):
+        if self.model is not None:
+            model, self.model = self.model, None
+            try:
+                model.__exit__(None, None, None)
+            finally:
+                model.face_resampling_pool.shutdown(wait=True)
+
+    def push(self, rgb: np.ndarray, timestamp: float):
+        if self.model is None:
+            raise RuntimeError("FacePhys is not initialized.")
+        if not math.isfinite(timestamp) or timestamp < 0:
+            raise ValueError("Invalid capture timestamp.")
+        if self.last_timestamp is not None and timestamp <= self.last_timestamp:
+            raise ValueError("Capture timestamps must increase.")
+        if rgb.dtype != np.uint8 or rgb.ndim != 3 or rgb.shape[2] != 3:
+            raise ValueError("Expected uint8 RGB frames.")
+        began = time.perf_counter()
+        if self.last_timestamp is not None and timestamp-self.last_timestamp > 0.25:
+            self.close()
+            self.start()
+            self.timestamps.clear()
+            self.epoch = timestamp
+            self.visible_since = None
+            self.sensing = CameraSensing()
+            self.gate = ReliabilityGate()
+        if self.start_time is None:
+            self.start_time = timestamp
+            self.epoch = timestamp
+        self.last_timestamp = timestamp
+        self.timestamps.append(timestamp)
+        if self.frame_count % 5 == 0:
+            detections = self.model.detector.detect(rgb)
+            self.camera = self.sensing.assess(rgb, detections, timestamp)
+            if not self.camera.face_visible or self.camera.face_count != 1:
+                self.visible_since = None
+            elif self.visible_since is None:
+                self.visible_since = timestamp
+        self.frame_count += 1
+        self.model.update_frame(rgb, ts=timestamp)
+        self.model.face_detection_task.result(timeout=5)
+        if not self.model.ift.is_alive():
+            raise RuntimeError("The FacePhys inference worker stopped. Restart measurement.")
+        self.processing_ms = (time.perf_counter()-began)*1000
+
+    def snapshot(self) -> Sample:
+        model = self.model
+        if model is None or self.last_timestamp is None:
+            return Sample(t=0)
+        elapsed = self.last_timestamp-self.start_time
+        visible_start = self.visible_since if self.visible_since is not None else self.last_timestamp
+        fresh = self.last_timestamp-max(self.epoch, visible_start)
+        stamps = np.asarray(self.timestamps)
+        fps = float((len(stamps)-1)/(stamps[-1]-stamps[0])) if len(stamps) > 1 else 0
+        candidate, sqi, wave = None, None, []
+        # Only read samples the upstream worker has completed; queries stay on its timeline.
+        count = min(model.n_signal, len(model.signal_buff.get("bvp", [])), len(model.ts))
+        if count >= 300:
+            end = model.ts[count-1]-model.ts[0]
+            start = max(0, end-10)
+            result = model.hr(start=start, end=end, return_hrv=False)
+            if result:
+                candidate, sqi = finite(result.get("hr")), finite(result.get("SQI"))
+                sqi = max(0, min(1, sqi)) if sqi is not None else None
+        if count >= 60:
+            end = model.ts[count-1]-model.ts[0]
+            values, _ = model.bvp(start=max(0, end-8), end=end)
+            wave = [float(x) for x in values[-240:] if math.isfinite(float(x))]
+        lag = max(0, self.last_timestamp-model.ts[count-1]) if count else 0
+        sample = Sample(t=round(elapsed, 3), sqi=sqi, fps=round(fps, 1),
+                        latency_ms=round(self.processing_ms + lag*1000, 1),
+                        camera=self.camera.model_copy(deep=True), waveform=wave)
+        if lag > 0.5:
+            fresh = 0
+        return self.gate.apply(sample, candidate, fresh)

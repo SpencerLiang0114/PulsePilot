@@ -1,0 +1,145 @@
+import math
+from collections import deque
+from dataclasses import dataclass
+
+import numpy as np
+
+from .schemas import CameraMetrics, Sample
+
+
+@dataclass(frozen=True)
+class Thresholds:
+    min_window: float = 10.0
+    min_fps: float = 24.0
+    sqi_enter: float = 0.55
+    sqi_exit: float = 0.45
+    center_offset: float = 0.18
+    min_size: float = 0.23
+    max_size: float = 0.70
+    max_motion: float = 0.28
+    min_brightness: float = 55
+    max_brightness: float = 225
+    max_imbalance: float = 45
+
+
+THRESHOLDS = Thresholds()
+
+ACTIONS = {
+    "face": "Bring your whole face into the guide, with no other faces in view.",
+    "visibility": "Keep your forehead and cheeks visible; move anything covering your face.",
+    "position": "Move into the center of the guide so your whole face stays in view.",
+    "far": "Move a little closer to the camera.",
+    "close": "Move a little farther from the camera.",
+    "angle": "Face the camera directly and keep your head level.",
+    "dark": "Face a window or a lamp to brighten your face.",
+    "bright": "Move away from direct light so your face is not overexposed.",
+    "uneven": "Place the light in front of you so both sides of your face are evenly lit.",
+    "flicker": "Use a steady light source and avoid changing the screen brightness.",
+    "motion": "Rest comfortably and keep your head still for the next few seconds.",
+    "cadence": "Close other camera apps and tabs to help the camera keep a steady frame rate.",
+    "signal": "Stay still a little longer while the pulse signal settles.",
+}
+
+
+def issues(sample: Sample) -> list[str]:
+    c, t = sample.camera, THRESHOLDS
+    if not c.face_visible or c.face_count != 1:
+        return ["face"]
+    found = []
+    if c.visibility_proxy < 0.7:
+        found.append("visibility")
+    if c.center_offset > t.center_offset:
+        found.append("position")
+    if c.face_size < t.min_size:
+        found.append("far")
+    elif c.face_size > t.max_size:
+        found.append("close")
+    if abs(c.yaw_proxy) > 0.35 or abs(c.roll_degrees) > 15:
+        found.append("angle")
+    if c.brightness < t.min_brightness:
+        found.append("dark")
+    elif c.brightness > t.max_brightness:
+        found.append("bright")
+    if c.light_imbalance > t.max_imbalance:
+        found.append("uneven")
+    if c.light_change > 25:
+        found.append("flicker")
+    if c.motion > t.max_motion:
+        found.append("motion")
+    if sample.t > 3 and sample.fps < t.min_fps:
+        found.append("cadence")
+    if sample.t >= 12 and (sample.sqi is None or sample.sqi < t.sqi_enter):
+        found.append("signal")
+    return found
+
+
+class CameraSensing:
+    """Six detector landmarks provide geometric proxies, not a calibrated 3-D pose."""
+
+    def __init__(self):
+        self.previous = None
+        self.lights = deque(maxlen=15)
+
+    def assess(self, rgb: np.ndarray, detections, timestamp: float) -> CameraMetrics:
+        if not len(detections):
+            self.previous = None
+            self.lights.clear()
+            return CameraMetrics()
+        box, confidence, points = detections[0]
+        h, w = rgb.shape[:2]
+        x1, y1, x2, y2 = np.asarray(box, dtype=float)
+        crop = rgb[max(0, int(y1)):min(h, int(y2)), max(0, int(x1)):min(w, int(x2))]
+        if crop.size == 0:
+            return CameraMetrics()
+        gray = crop.astype(float).mean(axis=2)
+        center = np.array([(x1+x2)/(2*w), (y1+y2)/(2*h)])
+        motion = 0.0
+        if self.previous:
+            prev_t, prev_center = self.previous
+            motion = float(np.linalg.norm(center-prev_center) / max(timestamp-prev_t, 0.03))
+        self.previous = (timestamp, center)
+        light = float(gray.mean())
+        self.lights.append(light)
+        points = np.asarray(points).reshape(-1, 2)
+        eye1, eye2, nose = points[:3]
+        eye_span = max(float(np.linalg.norm(eye2-eye1)), 1)
+        eye_delta = eye2-eye1
+        roll = math.degrees(math.atan2(float(eye_delta[1]), abs(float(eye_delta[0])) + 1e-6))
+        inside = ((points[:, 0] >= 0) & (points[:, 0] <= w) &
+                  (points[:, 1] >= 0) & (points[:, 1] <= h))
+        fully_visible = x1 >= 0 and y1 >= 0 and x2 <= w and y2 <= h
+        split = max(1, gray.shape[1]//2)
+        imbalance = abs(float(gray[:, :split].mean())-float(gray[:, split:].mean())) if gray.shape[1] > 1 else 0
+        return CameraMetrics(
+            face_visible=True, face_count=len(detections), confidence=float(confidence),
+            center_offset=float(np.linalg.norm(center-[0.5, 0.48])),
+            face_size=float((y2-y1)/h),
+            yaw_proxy=float((nose[0]-(eye1[0]+eye2[0])/2)/eye_span),
+            roll_degrees=roll, brightness=light, light_imbalance=imbalance,
+            light_change=float(np.std(self.lights)), motion=motion,
+            visibility_proxy=float(min(float(confidence), float(inside.mean()), 1 if fully_visible else 0.5)),
+            bbox=[float(x1/w), float(y1/h), float(x2/w), float(y2/h)],
+            landmarks=(points / [w, h]).tolist(),
+        )
+
+
+class ReliabilityGate:
+    def __init__(self):
+        self.stable = False
+        self.good_count = 0
+
+    def apply(self, sample: Sample, candidate: float | None, fresh_seconds: float) -> Sample:
+        t = THRESHOLDS
+        camera_ok = not [issue for issue in issues(sample) if issue != "signal"]
+        threshold = t.sqi_exit if self.stable else t.sqi_enter
+        valid = (camera_ok and fresh_seconds >= t.min_window and sample.fps >= t.min_fps
+                 and sample.sqi is not None and sample.sqi >= threshold
+                 and candidate is not None and math.isfinite(candidate) and 40 <= candidate <= 180)
+        self.good_count = self.good_count + 1 if valid else 0
+        self.stable = bool(valid and (self.stable or self.good_count >= 3))
+        sample.usable = self.stable
+        sample.bpm = round(candidate, 1) if self.stable else None
+        sample.state = ("Signal stable" if self.stable else
+                        "Adjust your position" if not camera_ok else
+                        "Measuring" if fresh_seconds < t.min_window else "Low confidence")
+        return sample
