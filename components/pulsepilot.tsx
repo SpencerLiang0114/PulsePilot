@@ -79,6 +79,7 @@ export function PulsePilot() {
   const measuring = m.status === "measuring";
   const liveVideo = measuring && m.mode !== "simulation";
   const current = measuring ? m.sample : null;
+  const camera = measuring ? m.camera ?? current?.camera : null;
   const active = m.interventions.find(i => i.outcome === "observing");
   const lastIntervention = m.interventions.at(-1);
   const selected = reports.find(r => r.id === selectedReport);
@@ -137,11 +138,11 @@ export function PulsePilot() {
                   }}><Maximize size={17} /></button>
                 </div>
                 {(!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
-                {liveVideo && showHeatmap && m.heatmap && current?.camera.face_visible && current.camera.face_count === 1 &&
+                {liveVideo && showHeatmap && m.heatmap && camera?.face_visible && camera.face_count === 1 &&
                   <FaceHeatmap heatmap={m.heatmap} captureSize={m.captureSize} mirrored={m.mode === "camera"} />}
-                {liveVideo && current?.camera.face_visible && current.camera.bbox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
-                  <rect x={current.camera.bbox[0] * m.captureSize.width} y={current.camera.bbox[1] * m.captureSize.height} width={(current.camera.bbox[2] - current.camera.bbox[0]) * m.captureSize.width} height={(current.camera.bbox[3] - current.camera.bbox[1]) * m.captureSize.height} rx="12" fill="none" stroke={current.usable ? "#75e1cf" : "#ffffff"} strokeWidth="1.5" />
-                  {current.camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
+                {liveVideo && camera?.face_visible && camera.bbox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
+                  <rect x={camera.bbox[0] * m.captureSize.width} y={camera.bbox[1] * m.captureSize.height} width={(camera.bbox[2] - camera.bbox[0]) * m.captureSize.width} height={(camera.bbox[3] - camera.bbox[1]) * m.captureSize.height} rx="12" fill="none" stroke={current?.usable ? "#75e1cf" : "#ffffff"} strokeWidth="1.5" />
+                  {camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
                 </svg>}
                 <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Position your face inside the guide to begin.</p></>}
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}
@@ -151,7 +152,7 @@ export function PulsePilot() {
                     <button role="switch" aria-checked={showHeatmap} aria-describedby="heatmap-description" onClick={() => setShowHeatmap(value => !value)}>
                       Face heatmap<span className="heatmap-switch" />
                     </button>
-                    <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && current?.camera.face_visible && current.camera.face_count === 1 ? "Temporal feature activity" : "Waiting for face activity"}</small>
+                    <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && camera?.face_visible && camera.face_count === 1 ? "Temporal feature activity" : "Waiting for face activity"}</small>
                     {showHeatmap && <span className="heatmap-legend"><span />Relative intensity</span>}
                   </div>
                   <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{current?.usable && current.bpm != null ? current.bpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{current?.state ?? "Finding your face"}</span></div>

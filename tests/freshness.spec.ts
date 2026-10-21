@@ -11,11 +11,12 @@ const accepted: Sample = {
   },
 };
 
-type CameraWindow = Window & { freezeCapture: () => void; testStream: MediaStream };
+type CameraWindow = Window & { freezeCapture: () => void; testStream: MediaStream; cameraConstraints: MediaStreamConstraints };
 
 async function camera(page: Page) {
   await page.addInitScript(() => {
-    Object.defineProperty(navigator.mediaDevices, "getUserMedia", { value: async () => {
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", { value: async (constraints: MediaStreamConstraints) => {
+      (window as unknown as CameraWindow).cameraConstraints = constraints;
       const canvas = document.createElement("canvas");
       canvas.width = 320; canvas.height = 240;
       const context = canvas.getContext("2d")!;
@@ -202,3 +203,36 @@ for (const stalled of ["capture", "samples", "sample timestamps", "acknowledgeme
     }
   });
 }
+
+
+test("tracking and heatmap position update between measurement and model samples", async ({ page }) => {
+  await camera(page);
+  let advance = false;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    let t = 0;
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        if (JSON.parse(message).type === "start") socket.send(JSON.stringify({ type: "ready", ai_status: "not_requested" }));
+        return;
+      }
+      t += 1/60;
+      socket.send(JSON.stringify({ type: "ack" }));
+      if (t === 1/60) socket.send(JSON.stringify({ type: "sample", interventions: [], sample: { ...accepted, t } }));
+      const bbox = advance ? [.4, .2, .8, .7] : [.2, .2, .6, .7];
+      socket.send(JSON.stringify({ type: "face_heatmap", t,
+        camera: { ...accepted.camera, bbox },
+        heatmap: { t: 0, bbox, width: 18, height: 18, values: Array(324).fill(128) },
+      }));
+    });
+  });
+  await page.goto("/");
+  await start(page);
+  expect(await page.evaluate(() => (window as unknown as CameraWindow).cameraConstraints.video)).toMatchObject({ frameRate: { ideal: 60, max: 60 } });
+  const rect = page.getByRole("img", { name: "Detected face", exact: true }).locator("rect");
+  const map = page.getByRole("img", { name: "Face temporal feature activity heatmap" }).locator("foreignObject");
+  await expect(rect).toHaveAttribute("x", "64");
+  advance = true;
+  await expect(rect).toHaveAttribute("x", "128");
+  await expect(map).toHaveAttribute("x", "128");
+  await expect(page.locator(".heart-value")).toHaveText("72BPM");
+});

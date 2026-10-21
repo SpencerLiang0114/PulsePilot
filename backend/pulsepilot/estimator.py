@@ -34,7 +34,6 @@ class FacePhysEstimator:
         self.sensing = CameraSensing()
         self.camera = CameraMetrics()
         self.gate = ReliabilityGate()
-        self.frame_count = 0
         self.processing_ms = 0.0
         self.frame_size = (0, 0)
 
@@ -100,14 +99,12 @@ class FacePhysEstimator:
         self.last_timestamp = timestamp
         self.frame_size = rgb.shape[:2]
         self.timestamps.append(timestamp)
-        if self.frame_count % 5 == 0:
-            detections = self.model.detector.detect(rgb)
-            self.camera = self.sensing.assess(rgb, detections, timestamp)
-            if not self.camera.face_visible or self.camera.face_count != 1:
-                self.visible_since = None
-            elif self.visible_since is None:
-                self.visible_since = timestamp
-        self.frame_count += 1
+        detections = self.model.detector.detect(rgb)
+        self.camera = self.sensing.assess(rgb, detections, timestamp)
+        if not self.camera.face_visible or self.camera.face_count != 1:
+            self.visible_since = None
+        elif self.visible_since is None:
+            self.visible_since = timestamp
         self.model.update_frame(rgb, ts=timestamp)
         self.model.face_detection_task.result(timeout=5)
         if not self.model.ift.is_alive():

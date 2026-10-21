@@ -128,6 +128,9 @@ def estimators(monkeypatch):
     instances = []
 
     class Estimator:
+        from pulsepilot.schemas import CameraMetrics
+        camera = CameraMetrics()
+
         def __init__(self):
             self.start_time = None
             self.last_timestamp = None
@@ -176,7 +179,7 @@ def test_camera_stream_busy_finish_and_restart(estimators):
                     assert "another session" in busy.receive_json()["message"]
                 for timestamp in [10, 10.5, 11]:
                     ws.send_bytes(frame_packet(timestamp))
-                    assert ws.receive_json() == {"type": "face_heatmap", "heatmap": None}
+                    assert ws.receive_json()["heatmap"] is None
                     sample = ws.receive_json()
                     assert sample["type"] == "sample"
                     assert sample["sample"]["t"] == timestamp-10
@@ -190,8 +193,8 @@ def test_camera_stream_busy_finish_and_restart(estimators):
         assert all(estimator.closed == 1 for estimator in estimators)
 
 
-@pytest.mark.parametrize("capture_fps", [15, 30, 60])
-def test_heatmap_stream_targets_30hz_without_changing_sample_rate(estimators, capture_fps):
+@pytest.mark.parametrize("capture_fps", [15, 30, 60, 120])
+def test_heatmap_stream_targets_60hz_without_changing_sample_rate(estimators, capture_fps):
     with TestClient(app) as client, client.websocket_connect(
         "/ws/measure", headers={"origin": "http://localhost:3000"}
     ) as ws:
@@ -204,13 +207,15 @@ def test_heatmap_stream_targets_30hz_without_changing_sample_rate(estimators, ca
                 if message["type"] == "ack":
                     break
                 if message["type"] == "face_heatmap":
+                    assert message["t"] == pytest.approx(index/capture_fps)
+                    assert "camera" in message
                     heatmaps += 1
                 elif message["type"] == "sample":
                     samples += 1
                 else:
                     pytest.fail(f"Unexpected message: {message['type']}")
-        assert heatmaps == 2*min(capture_fps, 30)
-        assert samples == 4
+        assert heatmaps == 2*min(capture_fps, 60)
+        assert samples == (5 if capture_fps == 120 else 4)
         ws.send_json({"type": "finish"})
         assert ws.receive_json()["type"] == "report"
 
@@ -226,7 +231,7 @@ def test_heatmap_stream_is_transient_and_absent_from_reports(monkeypatch, estima
     ) as ws:
         start_camera(ws)
         ws.send_bytes(frame_packet())
-        assert ws.receive_json() == {"type": "face_heatmap", "heatmap": heatmap.model_dump()}
+        assert ws.receive_json()["heatmap"] == heatmap.model_dump()
         assert ws.receive_json()["type"] == "sample"
         assert ws.receive_json()["type"] == "ack"
         ws.send_json({"type": "finish"})
