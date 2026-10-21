@@ -16,6 +16,10 @@ class SessionConfig(StrictModel):
     coaching: Literal["passive", "rules", "meta"] = "meta"
 
 
+class SessionCommand(StrictModel):
+    type: Literal["finish", "extend"]
+
+
 class CameraMetrics(StrictModel):
     face_visible: bool = False
     face_count: int = 0

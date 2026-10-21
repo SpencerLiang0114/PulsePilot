@@ -1,5 +1,5 @@
 import asyncio
-import json
+import math
 import os
 import struct
 import time
@@ -19,16 +19,31 @@ from . import agents
 from .coaching import MeasurementCoach
 from .estimator import FacePhysEstimator, weights_available
 from .reports import build_report
-from .schemas import SessionConfig
+from .schemas import SessionCommand, SessionConfig
 from .sensing import ReliabilityGate
 from .simulation import simulated_sample
 
 app = FastAPI(title="PulsePilot", version="0.1.0")
-origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+origins = [origin.strip() for origin in os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+).split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET"], allow_headers=[])
 model_lock = asyncio.Lock()
 model_status = {"ready": False, "error": None}
 MAX_FRAME_BYTES = 1_500_000
+FRAME_TIMEOUT = 15
+SESSION_TIMEOUT = 240
+
+
+async def run_inference(function, *args):
+    # Cancelling to_thread does not stop its worker. Keep the slot until it finishes.
+    task = asyncio.create_task(asyncio.to_thread(function, *args))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        with suppress(Exception):
+            await task
+        raise
 
 
 @app.get("/health")
@@ -42,9 +57,12 @@ def decode_frame(data: bytes):
     if not 16 < len(data) <= MAX_FRAME_BYTES:
         raise ValueError("Frame exceeds the size limit or is empty.")
     timestamp = struct.unpack("<d", data[:8])[0]
+    if not math.isfinite(timestamp) or timestamp < 0:
+        raise ValueError("Invalid capture timestamp.")
     # Only accept PNG and inspect IHDR before decompression to bound decoded memory.
     png = data[8:]
-    if not png.startswith(b"\x89PNG\r\n\x1a\n") or len(png) < 24:
+    if (not png.startswith(b"\x89PNG\r\n\x1a\n") or len(png) < 33
+            or png[8:16] != b"\x00\x00\x00\x0dIHDR"):
         raise ValueError("Expected a PNG frame.")
     width, height = struct.unpack(">II", png[16:24])
     if not 32 <= width <= 640 or not 32 <= height <= 480:
@@ -66,6 +84,7 @@ async def measurement(ws: WebSocket):
     pending: set[asyncio.Task] = set()
     samples = []
     ai_status = "not_configured"
+    initializing = False
     send_lock = asyncio.Lock()
 
     async def send(payload):
@@ -87,10 +106,13 @@ async def measurement(ws: WebSocket):
                 return
             await model_lock.acquire()
             has_slot = True
+            initializing = True
+            model_status.update(ready=False, error=None)
             await send({"type": "status", "state": "Initializing", "message": "Warming up FacePhys. The first session may take a moment."})
             estimator = FacePhysEstimator()
-            await asyncio.to_thread(estimator.start)
+            await run_inference(estimator.start)
             model_status.update(ready=True, error=None)
+            initializing = False
         await send({"type": "ready", "mode": config.mode, "ai_status": ai_status})
         gate = ReliabilityGate()
         target = config.duration
@@ -116,9 +138,9 @@ async def measurement(ws: WebSocket):
             await send({"type": "sample", "sample": sample.model_dump(),
                         "interventions": [i.model_dump() for i in coach.interventions]})
 
-        while time.monotonic()-wall_started < 240:
+        while time.monotonic()-wall_started < SESSION_TIMEOUT:
             try:
-                message = await asyncio.wait_for(ws.receive(), 0.125 if config.mode == "simulation" else 15)
+                message = await asyncio.wait_for(ws.receive(), 0.125 if config.mode == "simulation" else FRAME_TIMEOUT)
             except TimeoutError:
                 if config.mode != "simulation":
                     raise ValueError("No camera frames arrived for fifteen seconds. Restart measurement.")
@@ -129,32 +151,33 @@ async def measurement(ws: WebSocket):
                 continue
             if message["type"] == "websocket.disconnect":
                 return
-            if message.get("text"):
-                command = json.loads(message["text"])
-                if command.get("type") == "finish":
+            if message.get("text") is not None:
+                try:
+                    command = SessionCommand.model_validate_json(message["text"])
+                except ValidationError as exc:
+                    raise ValueError("Expected a session command: finish or extend.") from exc
+                if command.type == "finish":
                     break
-                if command.get("type") == "extend":
+                if command.type == "extend":
                     target = min(180, target+30)
                     await send({"type": "duration", "duration": target})
-                elif command.get("type") != "finish":
-                    raise ValueError("Unknown session command.")
                 continue
             if config.mode == "simulation":
                 raise ValueError("Simulation does not accept camera frames.")
             rgb, timestamp = await asyncio.to_thread(decode_frame, message.get("bytes", b""))
             if estimator.start_time is not None and timestamp-estimator.start_time > 181:
                 raise ValueError("Capture timestamp exceeded the session limit.")
-            await asyncio.to_thread(estimator.push, rgb, timestamp)
+            await run_inference(estimator.push, rgb, timestamp)
             elapsed = timestamp-estimator.start_time
             if elapsed-last_sample >= 0.49:
-                sample = await asyncio.to_thread(estimator.snapshot)
+                sample = await run_inference(estimator.snapshot)
                 await emit(sample)
             await send({"type": "ack"})
             if elapsed >= target:
                 break
         coach.finish(samples[-1].t if samples else 0)
         if estimator:
-            await asyncio.to_thread(estimator.close)
+            await run_inference(estimator.close)
             estimator = None
         if has_slot:
             model_lock.release()
@@ -172,12 +195,13 @@ async def measurement(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     except (TimeoutError, ValueError, ValidationError, RuntimeError) as exc:
-        if estimator and not model_status["ready"]:
-            model_status["error"] = "Model initialization failed; inspect server diagnostics."
+        if initializing or (estimator and isinstance(exc, (RuntimeError, TimeoutError))):
+            model_status.update(ready=False, error="Model initialization or inference failed; inspect server diagnostics.")
         with suppress(RuntimeError, WebSocketDisconnect):
-            await send({"type": "error", "message": str(exc)[:300]})
+            await send({"type": "error", "message": str(exc)[:300] or "The inference service timed out. Restart measurement."})
     except Exception:
-        model_status["error"] = "Inference initialization or processing failed."
+        if has_slot:
+            model_status.update(ready=False, error="Inference initialization or processing failed.")
         with suppress(RuntimeError, WebSocketDisconnect):
             await send({"type": "error", "message": "The inference service could not process this session. Check the backend setup and restart."})
         # Stack traces exclude frames and request payloads.
@@ -190,7 +214,7 @@ async def measurement(ws: WebSocket):
             await asyncio.gather(*pending, return_exceptions=True)
         try:
             if estimator:
-                await asyncio.to_thread(estimator.close)
+                await run_inference(estimator.close)
         finally:
             if has_slot:
                 model_lock.release()

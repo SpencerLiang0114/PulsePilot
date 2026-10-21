@@ -60,6 +60,7 @@ The current temporary URL uses a same-origin Next.js proxy and Cloudflare tunnel
 
 - [Architecture](docs/architecture.md)
 - [FacePhys source/API audit](docs/facephys-integration.md)
+- [Backend service and WebSocket protocol](docs/backend-service.md)
 - [Website experience](docs/web-experience.md)
 - [Agent design and verified Meta APIs](docs/agent-design.md)
 - [Phases and acceptance criteria](docs/implementation-plan.md)

@@ -37,6 +37,8 @@ class FacePhysEstimator:
         self.processing_ms = 0.0
 
     def start(self):
+        if self.model is not None:
+            raise RuntimeError("FacePhys is already initialized.")
         if not weights_available():
             raise RuntimeError("FacePhys weights are missing. Run uv run scripts/fetch_facephys.py.")
         os.environ.setdefault("KERAS_BACKEND", "jax")
@@ -49,16 +51,28 @@ class FacePhysEstimator:
         model.face_resampling_pool.shutdown(wait=True)
         model.face_detection_threads = 2
         model.face_resampling_threads = 2
-        model.__enter__()
         self.model = model
+        try:
+            model.__enter__()
+        except Exception:
+            self.close()
+            raise
 
     def close(self):
         if self.model is not None:
             model, self.model = self.model, None
             try:
-                model.__exit__(None, None, None)
+                # Drain detection before stopping inference, including on partial startup.
+                model.face_detection_pool.shutdown(wait=True)
             finally:
-                model.face_resampling_pool.shutdown(wait=True)
+                model.alive = False
+                model.sp.release()
+                try:
+                    worker = getattr(model, "ift", None)
+                    if worker is not None and worker.ident is not None:
+                        worker.join()
+                finally:
+                    model.face_resampling_pool.shutdown(wait=True)
 
     def push(self, rgb: np.ndarray, timestamp: float):
         if self.model is None:

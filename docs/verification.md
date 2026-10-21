@@ -38,6 +38,22 @@ The session watchdog now checks every 250 ms for five seconds without advancing 
 
 These checks establish browser freshness behavior and preserve the existing synthetic-input integration coverage; they do not establish physical-camera or physiological accuracy.
 
+## FacePhys backend service lifecycle
+
+Implemented and checked October 20, 2026. The existing real-time service now validates capture timestamps before decoding, checks the PNG IHDR header, and validates control messages against a strict schema. Model startup failure closes partially initialized workers; cancellation waits for outstanding model work before closing resources and releasing capacity. Failed model startup or runtime failure clears the previous readiness status, and a successful retry clears the error.
+
+| Check | Result | Scope |
+|---|---|---|
+| `cd backend && RUN_FACEPHYS_INTEGRATION=1 uv run pytest -q` | 51 passed in 21.26 seconds | Includes 50 deterministic tests and one opt-in real-checkpoint integration test. New cases cover startup cleanup, duplicate startup, cancellation during initialization, busy capacity, finish/restart, disconnect, idle timeout, malformed frames/commands, duplicate timestamps, wall-clock termination, and readiness recovery. |
+| Real-checkpoint integration case | Passed | 330 generated PNG frames paced at nominal 30 Hz through the FastAPI WebSocket handler, numerical report, model cleanup, and a fresh recording session. The final camera sample reported 30 fps; blank frames produced no accepted BPM. |
+| `uv run python ../scripts/smoke_facephys.py` | Passed | 360 finite BVP samples; 9.57-second warmup and 675.7 model-only fps on this Mac during this run. These timings exclude browser/network overhead and are not an end-to-end performance guarantee. |
+| `pnpm test:e2e tests/experience.spec.ts --grep 'recording runs\|real FacePhys'` | 2 passed in 18.6 seconds | Existing local development frontend on port 3000 and updated Python service on port 8000; synthetic browser camera and generated recording, report completion, and camera-track shutdown. Meta credentials were disabled for this run. |
+| `uv run ruff check pulsepilot tests ../scripts` | Passed | Python static checks |
+
+The default `uv run pytest -q` skips the opt-in checkpoint test. Upstream flat-signal normalization and the existing TestClient deprecation warnings remain; invalid model output is excluded from the accepted estimate.
+
+Run instructions, health semantics, payload limits, and client message shapes are in the [backend service guide](backend-service.md). This verification uses generated input and establishes execution, transport, and cleanup, not physiological accuracy or permanent deployment.
+
 ## Not verified / external dependencies
 
 - **Muse Spark live access:** the user will receive a hackathon key later. The official API integration, strict response schemas, and failure paths are implemented/tested with mocked HTTP responses. No live Meta request or AI-generated report is claimed.

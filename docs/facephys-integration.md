@@ -22,7 +22,7 @@ The upstream repository has no Python packaging metadata. Fetch its pinned commi
 
 ## Adapter contract
 
-`FacePhysEstimator.start()` initializes/warmups. `push(rgb, timestamp)` checks monotonic timestamps, handles large gaps, and feeds the original RGB image. `snapshot()` exposes finite BVP/HR/SQI plus camera metrics and measured cadence. `close()` drains and releases resources. All calls for one adapter run serially off the async event loop.
+`FacePhysEstimator.start()` initializes/warmups and rejects duplicate startup. `push(rgb, timestamp)` checks monotonic timestamps, handles large gaps, and feeds the original RGB image. `snapshot()` exposes finite BVP/HR/SQI plus camera metrics and measured cadence. `close()` drains detection, stops and joins inference, then closes the resampling pool; it also handles a partially failed context startup. The adapter manages that shutdown sequence because upstream context exit assumes successful startup. All calls for one adapter run serially off the async event loop, and request cancellation waits for in-flight model work before releasing resources or capacity. See the [backend service protocol](backend-service.md).
 
 Require at least ten seconds of fresh data and acceptable capture cadence, face visibility, lighting, motion, and periodicity before showing an estimate. Keep raw candidate HR separate from accepted HR. Short/invalid windows yield `null`, never a plausible default.
 
