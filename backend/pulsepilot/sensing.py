@@ -85,7 +85,8 @@ class CameraSensing:
             self.previous = None
             self.lights.clear()
             return CameraMetrics()
-        box, confidence, points = detections[0]
+        box, points, score = detections[0]
+        confidence = float(np.asarray(score).item())
         h, w = rgb.shape[:2]
         x1, y1, x2, y2 = np.asarray(box, dtype=float)
         crop = rgb[max(0, int(y1)):min(h, int(y2)), max(0, int(x1)):min(w, int(x2))]

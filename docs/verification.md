@@ -54,6 +54,15 @@ The default `uv run pytest -q` skips the opt-in checkpoint test. Upstream flat-s
 
 Run instructions, health semantics, payload limits, and client message shapes are in the [backend service guide](backend-service.md). This verification uses generated input and establishes execution, transport, and cleanup, not physiological accuracy or permanent deployment.
 
+## Camera detection crash and live preview
+
+Checked October 20, 2026. FacePhys returns `(box, landmarks, score)`, but the adapter unpacked `(box, score, landmarks)`. The first detected face therefore raised `cannot reshape array of size 1 into shape (2)` and closed the camera session. Corrected fixtures reproduced this exact error before the fix. The adapter now uses the upstream order and extracts its one-element confidence array explicitly.
+
+- Backend: 51 unit/protocol tests passed; the opt-in real-checkpoint WebSocket integration also passed. Focused Ruff checks, TypeScript, and the production build passed.
+- Browser: all 14 cases passed across the suite run and a focused rerun after correcting an ambiguous alert selector in the new permission test. Coverage includes visible video, face-box removal after face loss, permission-denied recovery, stale-data cleanup, recording playback, and stopped tracks.
+- Face-containing input: 20 frames derived transiently from the supplied reference screenshot passed through the real detector/estimator, returning six landmarks without a premature BPM. A separate browser canvas replay of that image exercised PNG/WebSocket transport, real face detection, preview/overlay alignment, fullscreen, report completion, and camera-track shutdown. This was static-image replay, not physical-camera capture or physiological validation.
+- Desktop and mobile screenshots were inspected. The live preview now includes the heart-rate readout, tracking box, waveform, and remaining time; simulation retains its explicit synthetic labeling.
+
 ## Not verified / external dependencies
 
 - **Muse Spark live access:** the user will receive a hackathon key later. The official API integration, strict response schemas, and failure paths are implemented/tested with mocked HTTP responses. No live Meta request or AI-generated report is claimed.

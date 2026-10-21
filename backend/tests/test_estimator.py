@@ -48,7 +48,7 @@ def test_close_is_idempotent_and_joins_both_worker_pools():
 def test_multiple_faces_restart_the_contiguous_measurement_window():
     box = np.array([100, 50, 220, 190])
     points = np.array([[140, 100], [180, 100], [160, 120], [160, 145], [120, 115], [200, 115]])
-    face = (box, .98, points)
+    face = (box, points, np.array([.98], dtype=np.float32))
     detector = SimpleNamespace(detect=lambda rgb: [face, face])
     estimator = FacePhysEstimator()
     estimator.model = SimpleNamespace(

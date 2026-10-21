@@ -40,12 +40,17 @@ def test_hysteresis_holds_then_drops():
     assert not gate.apply(good_sample(sqi=.40), 72, 12).usable
 
 
-def test_detection_metrics_and_no_face_reset():
+@pytest.mark.parametrize("confidence", [.98, np.array([.98], dtype=np.float32)])
+def test_detection_metrics_and_no_face_reset(confidence):
     sensor = CameraSensing()
     image = np.full((240, 320, 3), 140, dtype=np.uint8)
     points = np.array([[140, 100], [180, 100], [160, 120], [160, 145], [120, 115], [200, 115]])
-    result = sensor.assess(image, [(np.array([100, 50, 220, 190]), .98, points)], 1)
+    # FacePhys returns (box, six landmarks, score), with a one-element ONNX score.
+    result = sensor.assess(image, [(np.array([100, 50, 220, 190]), points, confidence)], 1)
     assert result.face_visible and result.brightness == 140
+    assert result.confidence == pytest.approx(.98)
+    assert result.bbox == pytest.approx([100/320, 50/240, 220/320, 190/240])
+    np.testing.assert_allclose(result.landmarks, points / [320, 240])
     assert abs(result.yaw_proxy) < .01 and result.roll_degrees == 0
     assert result.light_imbalance == 0
     assert not sensor.assess(image, [], 2).face_visible

@@ -75,6 +75,7 @@ export function PulsePilot() {
   });
   const busy = ["connecting", "measuring", "finishing"].includes(m.status);
   const measuring = m.status === "measuring";
+  const liveVideo = measuring && m.mode !== "simulation";
   const current = measuring ? m.sample : null;
   const active = m.interventions.find(i => i.outcome === "observing");
   const lastIntervention = m.interventions.at(-1);
@@ -123,8 +124,9 @@ export function PulsePilot() {
           {m.mode === "simulation" && busy && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulation · 4× playback</strong> Synthetic values to explore the experience. No camera or physiological measurement.</div>}
           <div className="measurement-grid">
             <div className="capture-column">
+              <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
               <div ref={captureRef} className={`capture-stage ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
-                <video ref={m.videoRef} playsInline muted className={`${m.mode === "camera" ? "mirrored" : ""} ${measuring && m.mode !== "simulation" ? "visible" : ""}`} aria-label="Live camera or recording preview" />
+                <video ref={m.videoRef} playsInline muted className={`${m.mode === "camera" ? "mirrored" : ""} ${liveVideo ? "visible" : ""}`} aria-label="Live camera or recording preview" />
                 <div className="camera-grid" />
                 <div className="camera-top"><span className="camera-badge"><span className={measuring ? "live-dot" : "off-dot"} />{measuring ? sources[m.mode] : m.status === "connecting" ? "Connecting" : "Camera off"}</span>
                   <button className="camera-expand" aria-label="Expand camera preview" onClick={() => {
@@ -132,15 +134,22 @@ export function PulsePilot() {
                     else void captureRef.current?.requestFullscreen().catch(() => {});
                   }}><Maximize size={17} /></button>
                 </div>
-                {(!measuring || m.mode === "simulation" || !current?.camera.face_visible) && <FaceGuide active={measuring} />}
-                {measuring && m.mode !== "simulation" && current?.camera.bbox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                {(!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
+                {liveVideo && current?.camera.face_visible && current.camera.bbox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
                   <rect x={current.camera.bbox[0] * m.captureSize.width} y={current.camera.bbox[1] * m.captureSize.height} width={(current.camera.bbox[2] - current.camera.bbox[0]) * m.captureSize.width} height={(current.camera.bbox[3] - current.camera.bbox[1]) * m.captureSize.height} rx="12" fill="none" stroke={current.usable ? "#75e1cf" : "#ffffff"} strokeWidth="1.5" />
                   {current.camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
                 </svg>}
                 <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Position your face inside the guide to begin.</p></>}
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}
                 </div>
-                <div className="camera-bottom"><span><LockKeyhole size={13} />Frames processed, never saved</span><span>{measuring ? `${Math.round(current?.fps ?? 0)} fps` : "Camera permission required"}</span></div>
+                {liveVideo && <>
+                  <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{current?.usable && current.bpm != null ? current.bpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{current?.state ?? "Finding your face"}</span></div>
+                  <div className="camera-signal">
+                    <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>
+                    <Chart values={current?.waveform ?? []} label="Pulse waveform over camera preview" color="#75e1cf" height={64} empty="Hold still while we collect your pulse signal" />
+                  </div>
+                </>}
+                <div className="camera-bottom"><span><LockKeyhole size={13} />Frames processed, never saved</span><span>{measuring ? `${Math.round(current?.fps ?? 0)} fps` : m.status === "connecting" ? "Preparing camera" : "Camera permission required"}</span></div>
               </div>
               <div className="capture-controls">
                 <div className="session-length"><Clock3 size={17} /><span>{busy ? <><strong>{clockText(current?.t ?? m.history.at(-1)?.t ?? 0)}</strong> / {clockText(m.duration)}</> : <><strong>60 second</strong> guided session</>}</span></div>
@@ -151,10 +160,10 @@ export function PulsePilot() {
                   <button className="primary" onClick={() => startSetup("camera")}><Camera size={17} />Start measurement</button>}</div>
               </div>
               {busy && <div className="session-progress" role="progressbar" aria-label="Measurement progress" aria-valuenow={Math.round(current?.t ?? 0)} aria-valuemin={0} aria-valuemax={m.duration}><span style={{ width: `${Math.min(100, (current?.t ?? m.history.at(-1)?.t ?? 0) / m.duration * 100)}%` }} /></div>}
-              <section className="waveform-panel"><div className="section-heading"><h3><Waves size={17} />Your pulse waveform</h3><span>{current?.waveform.length ? "BVP · normalized" : "Waiting for signal"}</span></div>
+              {!liveVideo && <section className="waveform-panel"><div className="section-heading"><h3><Waves size={17} />Your pulse waveform</h3><span>{current?.waveform.length ? "BVP · normalized" : "Waiting for signal"}</span></div>
                 <Chart values={current?.waveform ?? []} label="Live FacePhys blood volume pulse waveform" empty="A little stillness brings your signal into focus." />
                 <div className="waveform-footer"><span>Recent 8 seconds</span><span><span className={`mini-dot ${current?.usable ? "good" : ""}`} />{current?.state ?? "Ready when you are"}</span></div>
-              </section>
+              </section>}
             </div>
             <div className="insight-column">
               <section className="heart-panel"><div className="section-heading"><h3>Estimated heart rate</h3><Heart size={19} /></div>

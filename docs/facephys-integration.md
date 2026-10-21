@@ -11,7 +11,7 @@ Source: [open-rppg](https://github.com/KegangWangCCNU/open-rppg), inspected comm
 - `bvp(start=…, raw=False)` returns BVP and relative timestamps; `hr(start=…, return_hrv=False)` returns `hr`, `SQI`, `hrv`, and `latency`, or `None`. Disable HRV in this short-session MVP.
 - The API's `SQI` is autocorrelation periodicity, not an accuracy probability. Its calculation can produce nonfinite results for constant signals; guard every output.
 - The implementation fills/skips frames to reach 30 Hz. Sparse input can create apparently periodic signals; gate on actual capture cadence and gaps separately.
-- Detection returns a bounding box, confidence, and six landmarks. These support approximate pose/visibility feedback; they are not a dense face mesh or a validated occlusion detector.
+- Detection returns `(bounding_box, six_landmarks, confidence)`, with confidence stored as a one-element NumPy array. These support approximate pose/visibility feedback; they are not a dense face mesh or a validated occlusion detector.
 - The public model uses asynchronous buffers and silently reports some exceptions from worker threads. The adapter checks inference-worker liveness and available signal length, reads completed samples conservatively, bounds sessions, and closes both executors.
 
 ## Dependencies and installation
