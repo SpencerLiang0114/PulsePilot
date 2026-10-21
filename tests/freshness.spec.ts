@@ -45,6 +45,9 @@ async function start(page: Page) {
 test("live preview shows face tracking and signal, clears lost faces, and stops the camera", async ({ page }) => {
   await camera(page);
   let faceVisible = true;
+  let sendHeatmap = true;
+  let freezeHeatmap = false;
+  let heatmapTimestamp = 0;
   await page.routeWebSocket("**/ws/measure", socket => {
     let t = 0;
     socket.onMessage(message => {
@@ -54,6 +57,11 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
       }
       t += 1/30;
       socket.send(JSON.stringify({ type: "ack" }));
+      if (!freezeHeatmap) heatmapTimestamp = t;
+      if (sendHeatmap) socket.send(JSON.stringify({ type: "face_heatmap", heatmap: faceVisible ? {
+        t: heatmapTimestamp, bbox: [.2, .2, .65, .7], width: 18, height: 18,
+        values: Array.from({ length: 324 }, (_, i) => Math.round(i / 323 * 255)),
+      } : null }));
       socket.send(JSON.stringify({ type: "sample", interventions: [], sample: {
         ...accepted, t, bpm: faceVisible ? 72 : null, usable: faceVisible,
         state: faceVisible ? "Signal stable" : "Find your face",
@@ -67,17 +75,55 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   await expect(video).toHaveCSS("opacity", "1");
   await expect.poll(() => video.evaluate((el: HTMLVideoElement) => !el.paused && el.videoWidth > 0)).toBe(true);
   await expect(page.getByRole("img", { name: "Detected face", exact: true })).toBeVisible();
+  const heatmap = page.getByRole("img", { name: "Face temporal feature activity heatmap" });
+  const toggle = page.getByRole("switch", { name: "Face heatmap" });
+  await expect(heatmap).toBeVisible();
+  const checkAlignment = async () => {
+    const error = await heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
+      const video = document.querySelector("video")!;
+      const stage = video.getBoundingClientRect();
+      const scale = Math.min(stage.width / video.videoWidth, stage.height / video.videoHeight);
+      const contentWidth = video.videoWidth * scale, contentHeight = video.videoHeight * scale;
+      const map = canvas.getBoundingClientRect();
+      return Math.max(
+        Math.abs(map.x - (stage.x + (stage.width - contentWidth) / 2 + .35 * contentWidth)),
+        Math.abs(map.y - (stage.y + (stage.height - contentHeight) / 2 + .2 * contentHeight)),
+        Math.abs(map.width - .45 * contentWidth), Math.abs(map.height - .5 * contentHeight),
+      );
+    });
+    expect(error).toBeLessThan(1);
+  };
+  await checkAlignment();
+  await expect(heatmap).toHaveClass(/mirrored/);
+  await expect.poll(() => heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement) =>
+    canvas.getContext("2d")!.getImageData(0, 0, 1, 1).data[3])).toBeGreaterThan(0);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await expect(heatmap).toHaveCount(0);
+  await toggle.click();
+  await expect(heatmap).toBeVisible();
   await expect(page.locator(".camera-reading strong")).toHaveText("72.0");
   await expect(page.getByRole("img", { name: "Pulse waveform over camera preview" })).toBeVisible();
   await page.screenshot({ path: "test-results/live-camera-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await checkAlignment();
   await page.screenshot({ path: "test-results/live-camera-mobile.png", fullPage: true });
+  sendHeatmap = false;
+  await expect(heatmap).toHaveCount(0, { timeout: 1200 });
+  sendHeatmap = true;
+  await expect(heatmap).toBeVisible();
+  freezeHeatmap = true;
+  await expect(heatmap).toHaveCount(0, { timeout: 1200 });
+  freezeHeatmap = false;
+  await expect(heatmap).toBeVisible();
   faceVisible = false;
   await expect(page.getByRole("img", { name: "Detected face", exact: true })).toHaveCount(0);
+  await expect(heatmap).toHaveCount(0);
   await expect(page.locator(".camera-reading strong")).toHaveText("—");
   await expect(video).toHaveCSS("opacity", "1");
   await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(toggle).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as CameraWindow).testStream.getTracks().every(track => track.readyState === "ended"))).toBe(true);
 });
 

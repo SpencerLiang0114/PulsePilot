@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { backendUrl, Health, Intervention, Mode, Report, Sample } from "./types";
+import { backendUrl, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
 
 type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; file?: File };
 
@@ -15,6 +15,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
   const objectUrl = useRef<string | null>(null);
   const generation = useRef(0);
   const watchdogRef = useRef<number | null>(null);
+  const heatmapTimeout = useRef<number | null>(null);
   const onReportRef = useRef(onReport);
   const pendingReport = useRef<Report | null>(null);
   const statusRef = useRef("idle");
@@ -22,6 +23,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
   const [mode, setMode] = useState<Mode>("camera");
   const [duration, setDuration] = useState(60);
   const [sample, setSample] = useState<Sample | null>(null);
+  const [heatmap, setHeatmap] = useState<FaceHeatmap | null>(null);
   const [history, setHistory] = useState<Sample[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +37,14 @@ export function useMeasurement(onReport: (report: Report) => void) {
   const stopWatchdog = useCallback(() => {
     if (watchdogRef.current !== null) window.clearInterval(watchdogRef.current);
     watchdogRef.current = null;
+    if (heatmapTimeout.current !== null) window.clearTimeout(heatmapTimeout.current);
+    heatmapTimeout.current = null;
   }, []);
 
   const releaseCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
+    setHeatmap(null);
     const video = videoRef.current;
     if (video) { video.pause(); video.srcObject = null; video.removeAttribute("src"); video.load(); }
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
@@ -105,6 +110,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
     let previousFrame = -1;
     let captureTimestamp = -1;
     let sampleTimestamp = -1;
+    let heatmapTimestamp = -1;
     let lastCapture = performance.now();
     let lastAck = performance.now();
     let lastSample = performance.now();
@@ -237,6 +243,14 @@ export function useMeasurement(onReport: (report: Report) => void) {
             await beginCapture();
             break;
           case "ack": inFlight = Math.max(0, inFlight - 1); lastAck = performance.now(); break;
+          case "face_heatmap":
+            if (statusRef.current !== "measuring") break;
+            if (payload.heatmap && (!Number.isFinite(payload.heatmap.t) || payload.heatmap.t <= heatmapTimestamp)) break;
+            if (payload.heatmap) heatmapTimestamp = payload.heatmap.t;
+            if (heatmapTimeout.current !== null) window.clearTimeout(heatmapTimeout.current);
+            setHeatmap(payload.heatmap);
+            heatmapTimeout.current = window.setTimeout(() => setHeatmap(null), 750);
+            break;
           case "sample":
             if (statusRef.current !== "measuring" || !Number.isFinite(payload.sample.t) || payload.sample.t <= sampleTimestamp) break;
             sampleTimestamp = payload.sample.t;
@@ -266,6 +280,6 @@ export function useMeasurement(onReport: (report: Report) => void) {
     };
   }, [cancel, finish, releaseCamera, stopWatchdog]);
 
-  return { videoRef, status, mode, duration, sample, history, interventions, error, message, health,
+  return { videoRef, status, mode, duration, sample, heatmap, history, interventions, error, message, health,
     aiStatus, captureSize, start, finish, extend, cancel, refreshHealth };
 }

@@ -2,6 +2,7 @@
 import os
 import struct
 import time
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -10,11 +11,38 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from pulsepilot.app import app
+from pulsepilot.estimator import FacePhysEstimator
+from pulsepilot.schemas import CameraMetrics
 
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_FACEPHYS_INTEGRATION") != "1",
     reason="Set RUN_FACEPHYS_INTEGRATION=1 after fetching the FacePhys checkpoint.",
 )
+
+
+def test_heatmap_reads_real_checkpoint_temporal_state():
+    estimator = FacePhysEstimator()
+    estimator.start()
+    try:
+        state = estimator.model.state
+        yy, xx = np.mgrid[:36, :36]
+        for i in range(60):
+            pattern = 120 + 25*np.sin(xx/5+i/10)*np.cos(yy/7)
+            frame = np.repeat(pattern[None, ..., None], 3, axis=-1).astype(np.uint8)
+            output, state = estimator.model.call(frame, state)
+            assert np.isfinite(np.asarray(output["bvp"])).all()
+        # Exercise actual checkpoint features without pretending synthetic input is a detected face.
+        extractor = FacePhysEstimator()
+        extractor.model = SimpleNamespace(state=state, box=np.array([[30, 210], [70, 250]]), n_signal=1, ts=[2.0])
+        extractor.start_time = extractor.visible_since = 0
+        extractor.last_timestamp = 2.0
+        extractor.frame_size = (240, 320)
+        extractor.camera = CameraMetrics(face_visible=True, face_count=1, confidence=.99)
+        heatmap = extractor.heatmap()
+        assert heatmap is not None and len(set(heatmap.values)) > 10
+        assert len(heatmap.values) == 324
+    finally:
+        estimator.close()
 
 
 def test_real_checkpoint_stream_finish_and_fresh_recording_session():
@@ -37,6 +65,9 @@ def test_real_checkpoint_stream_finish_and_fresh_recording_session():
                         message = ws.receive_json()
                         if message["type"] == "ack":
                             break
+                        if message["type"] == "face_heatmap":
+                            assert message["heatmap"] is None
+                            continue
                         assert message["type"] == "sample", message
                         samples.append(message["sample"])
                 ws.send_json({"type": "finish"})

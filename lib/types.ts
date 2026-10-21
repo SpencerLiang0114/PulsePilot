@@ -1,4 +1,7 @@
 export type Mode = "camera" | "recording" | "simulation";
+export type FaceHeatmap = {
+  t: number; bbox: number[]; width: number; height: number; values: number[];
+};
 export type CameraMetrics = {
   face_visible: boolean; face_count: number; confidence: number; center_offset: number;
   face_size: number; yaw_proxy: number; roll_degrees: number; brightness: number;

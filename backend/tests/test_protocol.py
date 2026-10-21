@@ -148,6 +148,9 @@ def estimators(monkeypatch):
         def snapshot(self):
             return Sample(t=self.last_timestamp-self.start_time)
 
+        def heatmap(self):
+            return None
+
         def close(self):
             self.closed += 1
 
@@ -173,6 +176,7 @@ def test_camera_stream_busy_finish_and_restart(estimators):
                     assert "another session" in busy.receive_json()["message"]
                 for timestamp in [10, 10.5, 11]:
                     ws.send_bytes(frame_packet(timestamp))
+                    assert ws.receive_json() == {"type": "face_heatmap", "heatmap": None}
                     sample = ws.receive_json()
                     assert sample["type"] == "sample"
                     assert sample["sample"]["t"] == timestamp-10
@@ -184,6 +188,51 @@ def test_camera_stream_busy_finish_and_restart(estimators):
                 assert not client.get("/health").json()["busy"]
         assert len(estimators) == 2
         assert all(estimator.closed == 1 for estimator in estimators)
+
+
+@pytest.mark.parametrize("capture_fps", [15, 30, 60])
+def test_heatmap_stream_targets_30hz_without_changing_sample_rate(estimators, capture_fps):
+    with TestClient(app) as client, client.websocket_connect(
+        "/ws/measure", headers={"origin": "http://localhost:3000"}
+    ) as ws:
+        start_camera(ws)
+        heatmaps, samples = 0, 0
+        for index in range(2*capture_fps):
+            ws.send_bytes(frame_packet(10 + index/capture_fps))
+            while True:
+                message = ws.receive_json()
+                if message["type"] == "ack":
+                    break
+                if message["type"] == "face_heatmap":
+                    heatmaps += 1
+                elif message["type"] == "sample":
+                    samples += 1
+                else:
+                    pytest.fail(f"Unexpected message: {message['type']}")
+        assert heatmaps == 2*min(capture_fps, 30)
+        assert samples == 4
+        ws.send_json({"type": "finish"})
+        assert ws.receive_json()["type"] == "report"
+
+
+def test_heatmap_stream_is_transient_and_absent_from_reports(monkeypatch, estimators):
+    import pulsepilot.app as module
+    from pulsepilot.schemas import FaceHeatmap
+
+    heatmap = FaceHeatmap(t=0, bbox=[.2, .1, .8, .9], values=[128]*324)
+    monkeypatch.setattr(module.FacePhysEstimator, "heatmap", lambda self: heatmap)
+    with TestClient(app) as client, client.websocket_connect(
+        "/ws/measure", headers={"origin": "http://localhost:3000"}
+    ) as ws:
+        start_camera(ws)
+        ws.send_bytes(frame_packet())
+        assert ws.receive_json() == {"type": "face_heatmap", "heatmap": heatmap.model_dump()}
+        assert ws.receive_json()["type"] == "sample"
+        assert ws.receive_json()["type"] == "ack"
+        ws.send_json({"type": "finish"})
+        report = ws.receive_json()["report"]
+        assert len(report["samples"]) == 1
+        assert "heatmap" not in str(report)
 
 
 @pytest.mark.parametrize("terminal", ["disconnect", "idle", "invalid_frame", "duplicate", "duration"])
@@ -201,6 +250,7 @@ def test_camera_terminal_paths_release_capacity(monkeypatch, estimators, termina
                 ws.send_bytes(b"not a frame")
             elif terminal == "duplicate":
                 ws.send_bytes(frame_packet())
+                assert ws.receive_json()["type"] == "face_heatmap"
                 assert ws.receive_json()["type"] == "sample"
                 assert ws.receive_json()["type"] == "ack"
                 ws.send_bytes(frame_packet())

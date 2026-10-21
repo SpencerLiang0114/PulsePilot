@@ -60,6 +60,16 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .mirrored { transform:scaleX(-1); }
 .capture-stage:has(video.visible) { background:#152c35; }
 .face-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.face-heatmap canvas { display:block; width:100%; height:100%; }
+.heatmap-control { position:absolute; top:64px; right:14px; z-index:3; padding:9px; border:1px solid #ffffff26; border-radius:8px; background:#171b24d9; color:#e9f0ef; }
+.heatmap-control button { display:flex; align-items:center; justify-content:space-between; gap:9px; width:100%; border:0; padding:0; background:transparent; color:inherit; font-size:11px; font-weight:650; }
+.heatmap-switch { display:block; width:29px; height:17px; border-radius:12px; background:#64768a; padding:2px; }
+.heatmap-switch::after { content:""; display:block; width:13px; height:13px; border-radius:50%; background:white; transition:transform .15s; }
+.heatmap-control [aria-checked="true"] .heatmap-switch { background:#167c80; }
+.heatmap-control [aria-checked="true"] .heatmap-switch::after { transform:translateX(12px); }
+.heatmap-control small { display:block; margin-top:6px; font-size:9px; color:#c5d6d9; }
+.heatmap-legend { display:flex; align-items:center; gap:6px; margin-top:6px; font-size:9px; color:#c5d6d9; }
+.heatmap-legend > span { width:34px; height:5px; border-radius:2px; background:linear-gradient(90deg,#f00,#ff0); }
 .face-guide { position:absolute; height:250px; width:227px; top:24px; left:50%; transform:translateX(-50%); color:#7da49d; }
 .guide-bracket { stroke:currentColor; stroke-width:2; stroke-linecap:round; opacity:.75; }
 .guide-oval { stroke:currentColor; stroke-width:1; stroke-dasharray:3 5; opacity:.55; }

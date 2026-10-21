@@ -10,6 +10,7 @@ import { useMeasurement } from "@/lib/use-measurement";
 import { clockText, Mode, percent, Report } from "@/lib/types";
 import { Chart } from "./chart";
 import { ReportView } from "./report";
+import { FaceHeatmap } from "./face-heatmap";
 
 const sources = { camera: "Live camera", recording: "Video recording", simulation: "Guided simulation" };
 
@@ -62,6 +63,7 @@ export function PulsePilot() {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [setup, setSetup] = useState<Mode | null>(null);
   const [file, setFile] = useState<File | undefined>();
+  const [showHeatmap, setShowHeatmap] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const latestReportId = useRef<string | null>(null);
@@ -135,6 +137,8 @@ export function PulsePilot() {
                   }}><Maximize size={17} /></button>
                 </div>
                 {(!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
+                {liveVideo && showHeatmap && m.heatmap && current?.camera.face_visible && current.camera.face_count === 1 &&
+                  <FaceHeatmap heatmap={m.heatmap} captureSize={m.captureSize} mirrored={m.mode === "camera"} />}
                 {liveVideo && current?.camera.face_visible && current.camera.bbox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
                   <rect x={current.camera.bbox[0] * m.captureSize.width} y={current.camera.bbox[1] * m.captureSize.height} width={(current.camera.bbox[2] - current.camera.bbox[0]) * m.captureSize.width} height={(current.camera.bbox[3] - current.camera.bbox[1]) * m.captureSize.height} rx="12" fill="none" stroke={current.usable ? "#75e1cf" : "#ffffff"} strokeWidth="1.5" />
                   {current.camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
@@ -143,6 +147,13 @@ export function PulsePilot() {
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}
                 </div>
                 {liveVideo && <>
+                  <div className="heatmap-control" title="Relative activity of FacePhys temporal features; not a blood-flow, temperature, or optical spectrum measurement.">
+                    <button role="switch" aria-checked={showHeatmap} aria-describedby="heatmap-description" onClick={() => setShowHeatmap(value => !value)}>
+                      Face heatmap<span className="heatmap-switch" />
+                    </button>
+                    <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && current?.camera.face_visible && current.camera.face_count === 1 ? "Temporal feature activity" : "Waiting for face activity"}</small>
+                    {showHeatmap && <span className="heatmap-legend"><span />Relative intensity</span>}
+                  </div>
                   <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{current?.usable && current.bpm != null ? current.bpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{current?.state ?? "Finding your face"}</span></div>
                   <div className="camera-signal">
                     <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>

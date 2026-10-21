@@ -117,6 +117,7 @@ async def measurement(ws: WebSocket):
         gate = ReliabilityGate()
         target = config.duration
         simulation_t, last_sample = 0.0, -1.0
+        last_heatmap_tick = -1
         wall_started = time.monotonic()
 
         async def explain(item, sample):
@@ -169,6 +170,11 @@ async def measurement(ws: WebSocket):
                 raise ValueError("Capture timestamp exceeded the session limit.")
             await run_inference(estimator.push, rgb, timestamp)
             elapsed = timestamp-estimator.start_time
+            heatmap_tick = math.floor(elapsed*30 + 1e-6)
+            if heatmap_tick > last_heatmap_tick:
+                heatmap = await run_inference(estimator.heatmap)
+                await send({"type": "face_heatmap", "heatmap": heatmap.model_dump() if heatmap else None})
+                last_heatmap_tick = heatmap_tick
             if elapsed-last_sample >= 0.49:
                 sample = await run_inference(estimator.snapshot)
                 await emit(sample)

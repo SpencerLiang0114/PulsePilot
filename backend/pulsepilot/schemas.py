@@ -49,6 +49,14 @@ class Sample(StrictModel):
     waveform: list[float] = Field(default_factory=list)
 
 
+class FaceHeatmap(StrictModel):
+    t: float
+    bbox: list[float] = Field(min_length=4, max_length=4)
+    width: Literal[18] = 18
+    height: Literal[18] = 18
+    values: list[int] = Field(min_length=324, max_length=324)
+
+
 class Intervention(StrictModel):
     id: str
     issue: str

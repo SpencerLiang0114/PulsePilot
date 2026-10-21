@@ -6,9 +6,10 @@ import time
 from collections import deque
 from pathlib import Path
 
+import cv2
 import numpy as np
 
-from .schemas import CameraMetrics, Sample
+from .schemas import CameraMetrics, FaceHeatmap, Sample
 from .sensing import CameraSensing, ReliabilityGate
 
 ROOT = Path(os.getenv("FACEPHYS_ROOT", Path(__file__).resolve().parents[2] / ".vendor/open-rppg"))
@@ -35,6 +36,7 @@ class FacePhysEstimator:
         self.gate = ReliabilityGate()
         self.frame_count = 0
         self.processing_ms = 0.0
+        self.frame_size = (0, 0)
 
     def start(self):
         if self.model is not None:
@@ -96,6 +98,7 @@ class FacePhysEstimator:
             self.start_time = timestamp
             self.epoch = timestamp
         self.last_timestamp = timestamp
+        self.frame_size = rgb.shape[:2]
         self.timestamps.append(timestamp)
         if self.frame_count % 5 == 0:
             detections = self.model.detector.detect(rgb)
@@ -110,6 +113,41 @@ class FacePhysEstimator:
         if not self.model.ift.is_alive():
             raise RuntimeError("The FacePhys inference worker stopped. Restart measurement.")
         self.processing_ms = (time.perf_counter()-began)*1000
+
+    def heatmap(self) -> FaceHeatmap | None:
+        model = self.model
+        if (model is None or self.last_timestamp is None or self.visible_since is None
+                or not self.camera.face_visible or self.camera.face_count != 1
+                or self.camera.confidence < 0.8 or model.box is None):
+            return None
+        count = min(model.n_signal, len(model.ts))
+        if not count:
+            return None
+        timestamp = model.ts[count-1]
+        if self.last_timestamp-timestamp > 0.2 or timestamp-self.visible_since < 0.5:
+            return None
+        # Pinned FacePhys: first block, second layer's temporal feature variance.
+        # JAX states are immutable; keep one reference while the worker replaces it.
+        state = model.state
+        variance = np.asarray(state[0][1]["tn"]["x2mean"])[0, 0]
+        if variance.shape != (36, 36, 32) or not np.isfinite(variance).all():
+            return None
+        activity = np.sqrt(np.maximum(variance.mean(axis=-1), 0))
+        activity = cv2.resize(activity, (18, 18), interpolation=cv2.INTER_AREA)
+        low, high = np.percentile(activity, [5, 95])
+        if high-low < 1e-6:
+            return None
+        values = np.rint(np.clip((activity-low)/(high-low), 0, 1)*255).astype(np.uint8)
+        h, w = self.frame_size
+        # Upstream crops with box in [[top, bottom], [left, right]] order.
+        box = np.asarray(model.box, dtype=float).copy()
+        x1, x2 = np.clip(box[1], 0, w)/w
+        y1, y2 = np.clip(box[0], 0, h)/h
+        if x2 <= x1 or y2 <= y1:
+            return None
+        return FaceHeatmap(t=round(timestamp-self.start_time, 3),
+                           bbox=[float(x1), float(y1), float(x2), float(y2)],
+                           values=values.reshape(-1).tolist())
 
     def snapshot(self) -> Sample:
         model = self.model

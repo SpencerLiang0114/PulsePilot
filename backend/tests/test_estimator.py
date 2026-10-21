@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from pulsepilot.estimator import FacePhysEstimator
+from pulsepilot.schemas import CameraMetrics
 
 
 def test_failed_start_closes_partially_initialized_workers(monkeypatch):
@@ -65,3 +66,47 @@ def test_multiple_faces_restart_the_contiguous_measurement_window():
     estimator.frame_count = 5
     estimator.push(frame, 2.1)
     assert estimator.visible_since == 2.1
+
+
+@pytest.fixture
+def heatmap_estimator():
+    estimator = FacePhysEstimator()
+    variance = np.broadcast_to(np.arange(36*36).reshape(1, 1, 36, 36, 1), (1, 1, 36, 36, 32)).copy()
+    estimator.model = SimpleNamespace(
+        state=[[{}, {"tn": {"x2mean": variance}}]], n_signal=1, ts=[10.9],
+        box=np.array([[40, 200], [80, 240]]),
+    )
+    estimator.frame_size = (240, 320)
+    estimator.start_time = estimator.visible_since = 10
+    estimator.last_timestamp = 11
+    estimator.camera = CameraMetrics(face_visible=True, face_count=1, confidence=.98)
+    return estimator
+
+
+def test_heatmap_uses_spatial_model_variance_and_the_actual_crop(heatmap_estimator):
+    heatmap = heatmap_estimator.heatmap()
+    assert heatmap.t == .9
+    assert heatmap.bbox == [80/320, 40/240, 240/320, 200/240]
+    assert heatmap.width == heatmap.height == 18 and len(heatmap.values) == 324
+    assert min(heatmap.values) == 0 and max(heatmap.values) == 255
+    assert heatmap.values[0] < heatmap.values[-1]
+
+
+@pytest.mark.parametrize("condition", ["lost", "multiple", "low_confidence", "lag", "warmup", "empty", "flat", "nan"])
+def test_heatmap_hides_unusable_or_uninitialized_features(heatmap_estimator, condition):
+    estimator = heatmap_estimator
+    if condition == "lost":
+        estimator.camera.face_visible = False
+    elif condition == "multiple":
+        estimator.camera.face_count = 2
+    elif condition == "low_confidence":
+        estimator.camera.confidence = .5
+    elif condition == "lag":
+        estimator.last_timestamp = 12
+    elif condition == "warmup":
+        estimator.visible_since = 10.8
+    elif condition == "empty":
+        estimator.model.n_signal = 0
+    else:
+        estimator.model.state[0][1]["tn"]["x2mean"] = np.full((1, 1, 36, 36, 32), np.nan if condition == "nan" else 1)
+    assert estimator.heatmap() is None
