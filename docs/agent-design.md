@@ -1,5 +1,7 @@
 # Agents and closed-loop feedback
 
+P2 uses two event-scoped LangGraph workflows behind `OrchestrationService`; see [langgraph-p2.md](langgraph-p2.md) for the complete contract, node, routing, and mode reference. The default is `AGENT_MODE=assist`; adaptive action selection requires `AGENT_MODE=adaptive`. Passive/rules preferences and separate AI consent remain authoritative.
+
 ## Verified Meta interface
 
 Meta lists `muse-spark-1.3` through its [Model API](https://dev.meta.ai/docs/models). Use server-only `MODEL_API_KEY` and `https://api.meta.ai/v1/chat/completions`. The [structured-output cookbook](https://dev.meta.ai/docs/cookbook/structured-output) documents `response_format: {type: "json_schema", json_schema: {name, strict, schema}}`. Pydantic validates responses again; reject unknown fields, invalid evidence identifiers, and instructions outside the deterministic eligible set.
@@ -25,9 +27,9 @@ MONITORING → DECIDING → ACTING → OBSERVING → COOLDOWN → MONITORING
 
 `MeasurementCoach.update()` proposes a `DecisionContext` without creating an intervention. It contains scalar camera metrics, current issues, recent SQI trend, usable fraction, candidates, up to six completed outcomes, remaining session duration and the decision deadline. It contains no frames, bounding boxes, landmarks, waveform, or API credentials.
 
-The WebSocket session starts at most one `SensingDecisionAgent.decide()` task. Camera processing and samples continue. A two-second wall-clock deadline covers the complete request. The strict `AgentDecision` contains a candidate `action_id` (or null), a reason, and a bounded explanation. Explanations must exactly match one of the server-supplied supported explanations. An alternative-action explanation additionally requires an actual unsuccessful prior action. This prevents fabricated observations or outcomes in coaching text while leaving action selection to Muse.
+In adaptive mode the WebSocket session starts at most one `OrchestrationService.run_coach_event()` task before commitment. Camera processing and samples continue. A 1.5-second application deadline covers the complete graph. The strict `CoachProposal` binds session/event IDs, a candidate `action_id` and matching `issue_id` (or null), a reason, and a bounded explanation. Explanations must exactly match a server-supported explanation. An alternative-action explanation additionally requires an actual unsuccessful different prior action. In assist mode rules commit immediately and the graph may only enrich the same action's explanation during its response window. Observe results do not change visible decisions; off mode skips graphs.
 
-On the next fresh sample, the coach rechecks the proposal ID, active session, current eligibility, safety conditions and remaining observation time before committing. Instruction timing starts at this commitment. No new request or intervention overlaps the active one. Resolved actions are discarded; face loss/multiple faces invalidate pending requests, including between sample events. Sample gaps invalidate pending proposals and make active comparisons inconclusive. Finish, disconnect, errors and cancellation cancel/drain pending tasks before session cleanup. Task completion itself cannot mutate the coach or send an instruction.
+On the next fresh sample, the coach rechecks the proposal ID, active session, current eligibility, capture-timeline freshness, safety conditions and remaining observation time before committing. Instruction timing starts at this commitment. No new request or intervention overlaps the active one. Resolved actions are discarded; face loss/multiple faces invalidate pending requests, including between sample events. Sample gaps invalidate pending proposals and make active comparisons inconclusive. Finish, disconnect, errors and cancellation cancel/drain pending tasks before session cleanup. Task completion itself cannot mutate the coach or send an instruction.
 
 Timeouts, authentication/network failures, malformed output and ineligible decisions use the current eligible deterministic candidate. Provenance records `decision_source`, `explanation_source`, and `decision_status` (`selected`, `rules`, `safety`, or `fallback_*`). The legacy `source` field mirrors `decision_source`. A fallback never acquires Muse decision provenance. Valid abstention creates no intervention and waits through a cooldown. No instruction starts if insufficient time remains for the response and observation windows.
 
@@ -41,7 +43,7 @@ The setup dialog exposes `passive`, `rules`, and `meta`. AI requests require exp
 
 The server computes accepted-HR mean, median, range, trend points, observed duration, valid proportion, tracking continuity, camera-condition summaries, time to stable signal, cadence, latency, and intervention comparisons. Numerical data and conclusions remain immutable.
 
-`build_report()` creates a typed `GroundedClaim` catalogue for the four sections. Each claim binds a section, claim/evidence IDs, claim type, statement type, metric, exact value and deterministic text. Muse selects complete claims from this catalogue; it does not author factual prose. `analyze_report()` validates the strict schema, exact equality of every field, section placement and absence of duplicate claims, then renders the canonical server text. Altered numbers, fabricated improvement, unsupported stable/accurate-heart-rate claims, medical text, causal claims and fabricated observations are rejected. This is deliberately more restrictive than validating evidence IDs or prohibited phrases.
+`build_report()` creates a typed `GroundedClaim` catalogue for the four sections. Each claim binds a section, claim/evidence IDs, bounded semantic claim type, statement type, metric, exact value and deterministic text. The report graph asks Muse to select `claim_id`, `claim_type`, and `evidence_id` references from this catalogue; it does not accept factual prose or model statistics. It validates exact binding, section placement and absence of duplicates, then renders canonical server text. Altered numbers, fabricated improvement, unsupported stable/accurate-heart-rate claims, medical text, causal claims and fabricated observations cannot enter the defined output contract. The P1 exact-copy `analyze_report()` remains a compatibility helper; application dispatch uses the graph service.
 
 On any invalid or unavailable response, the complete deterministic report and statistics are preserved with `ai_status: "unavailable"`. The numerical report is delivered before the optional analysis request. The UI always renders numerical statistics from deterministic tools. Claims and decision/explanation provenance are included in exported JSON.
 
@@ -52,11 +54,12 @@ cd backend
 uv run pytest -q
 RUN_FACEPHYS_INTEGRATION=1 uv run pytest -q tests/test_facephys_integration.py
 uv run python ../scripts/smoke_facephys.py
+uv run python ../scripts/evaluate_p2.py --output ../docs/p2-evaluation.json
 # Opt-in real Meta requests, explicitly synthetic conditions:
-uv run python ../scripts/verify_sensing_agent.py --live --output ../docs/p1-live-verification.json
+uv run python ../scripts/verify_sensing_agent.py --live --output ../docs/p2-live-verification.json
 ```
 
-`test_sensing_agent.py` covers persistent multiple candidates, selection/abstention, unsupported explanations, timeouts/auth failures, fallback provenance, disjoint windows, adaptation, stale/late results, finish/disconnect/restart cleanup, consent and a complete WebSocket loop. Browser tests cover mode selection, explicit consent, pending-versus-committed instructions, state visibility and report provenance. See [P1 validation](p1-verification.md) for results and limits.
+`test_sensing_agent.py`, `test_graph*.py`, and `test_adaptive_coaching.py` cover routing, strict schemas, session/event identity, selection/abstention, unsupported explanations, timeouts/auth failures, provenance, disjoint windows, bounded adaptation, stale results, cancellation, frame ACK continuity, consent, safe telemetry, and complete WebSocket loops in every mode. Browser tests cover mode selection, consent, pending/committed instructions, explanation provenance and report lifecycle. See [P2 verification](verification.md#p2-langgraph-verification) for current results; [P1 validation](p1-verification.md) is historical evidence.
 
 ## SAM decision
 

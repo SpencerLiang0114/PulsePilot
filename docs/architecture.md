@@ -1,6 +1,6 @@
 # PulsePilot architecture
 
-Verified and planned on October 20, 2026. This is a research demonstration, not a medical device.
+Updated for P2 on October 27, 2026. This is a research demonstration, not a medical device. [The P2 guide](langgraph-p2.md) defines the current graphs, operating modes, lifecycle, and verification scope.
 
 ## Vertical slice
 
@@ -10,10 +10,10 @@ Browser camera or user-selected recording
   → FastAPI session (one isolated FacePhys state per connection)
   → FacePhys.rlap → BVP, HR, periodicity SQI
   → camera metrics + conservative validity gate
-  → persistent candidates → asynchronous Muse/rules selection → validated instruction
+  → persistent candidates → mode-controlled LangGraph proposal/explanation → coach-validated instruction
   → observe → deterministic comparison → session-local outcome memory → next decision
   → live website + deterministic session statistics
-  → Muse Spark typed claim selection → validated report
+  → LangGraph report workflow → Muse Spark typed claim references → server-rendered report
 ```
 
 Next.js/React/TypeScript owns the camera, preview, charts, controls, report history, and export. Python/FastAPI owns inference, timing validation, quality metrics, intervention outcomes, and reports. Browser capture is the only webcam owner; Python never opens a camera. No database is needed: keep reports in browser memory until the page closes, with explicit JSON and print export.
@@ -25,6 +25,8 @@ Use a single long-running inference process initially, with one active real sess
 `GET /health` reports actual model readiness and whether Meta credentials are configured. `WS /ws/measure` accepts a configuration message, initializes the model, then sends readiness. A binary frame consists of an eight-byte little-endian capture timestamp in seconds plus PNG image bytes. At most four frames are in flight in the browser, with a byte-buffer cap; frame ACKs provide backpressure while allowing network round trips longer than one camera frame. Timestamp discontinuity resets the temporal window; low capture rate suppresses BPM. A finish command returns numerical results immediately, followed by AI analysis when available. Disconnect, cancellation, idle timeout, maximum duration, and initialization failure all release the model slot.
 
 Camera metrics are sampled alongside inference; live summaries are emitted at 2 Hz. Browser transport scales the source proportionally to fit 320×240 before lossless PNG encoding; FacePhys retains its own original face detection/cropping and 36×36 model preprocessing. Frames are decoded in a worker thread. Slow Meta requests run as independent tasks and never hold the frame-processing loop. Origin allowlisting, message-size limits, a finite session duration, and a single-session capacity limit bound the public demo.
+
+The orchestration service owns event identities and bounded execution per WebSocket. It runs only quality/coaching/report events, never per-frame inference. `off` skips graphs; `observe` collects diagnostics; default `assist` enriches rules-selected actions; explicit `adaptive` permits eligible action selection before commitment. Separate AI consent gates every remote request. Coaching has a 1.5-second application deadline; the coach revalidates every asynchronous result. Numerical reports arrive after inference resources are released, ahead of optional analysis. Disconnect cancels pending analysis. Local telemetry excludes measurement payloads and external tracing is disabled.
 
 ## Privacy
 

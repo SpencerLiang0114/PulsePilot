@@ -28,6 +28,8 @@ When using a public URL, set `PUBLIC_ORIGIN=https://your-host` before building t
 
 `docker compose` does not automatically read `backend/.env`. Export `MODEL_API_KEY` in the shell or supply it through your secret manager; `.env` files and keys are excluded from container build contexts.
 
+P2 defaults to `AGENT_MODE=assist`. Compose passes `${AGENT_MODE:-assist}` to the inference service; export `AGENT_MODE=off`, `observe`, or `adaptive` before starting Compose to change behavior. On a directly hosted backend set the same server environment variable before Uvicorn. Adaptive selection is opt-in; every remote model transfer still requires per-session AI consent. LangGraph is installed from the frozen backend lockfile by the existing Dockerfile. See [P2 deployment and privacy details](langgraph-p2.md).
+
 ## Temporary demo without containers
 
 Build Next.js with `INFERENCE_INTERNAL_URL=http://127.0.0.1:8000 pnpm build`, then start it on a local port. Next.js proxies the fixed `/health` and `/ws/measure` routes to Python. Leave `NEXT_PUBLIC_BACKEND_URL` unset so a public browser uses its own HTTPS origin.

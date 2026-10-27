@@ -59,9 +59,11 @@ This abbreviated example omits the camera metrics; the full schemas are in `back
 Supported JSON commands after readiness:
 
 - `{"type":"extend"}` adds 30 seconds, capped at 180; the server replies with `duration`.
-- `{"type":"finish"}` stops inference, releases capacity, sends a `report`, and closes. The report keeps numerical samples but omits waveform arrays. With configured and consented AI, the numerical report arrives first with `ai_status: "pending"`, followed by the completed interpretation.
+- `{"type":"finish"}` stops inference, releases capacity, sends a `report`, and closes. The report keeps numerical samples but omits waveform arrays. In assist/adaptive mode with configured and consented AI, the numerical report arrives first with `ai_status: "pending"`, followed by validated interpretation or deterministic fallback. Off mode skips graphs; observe mode keeps deterministic reports visible. Reports export the configured agent mode and bounded safe run telemetry. Disconnect cancels optional analysis immediately.
 
 Malformed commands or frames produce an `error` and close the session. Fifteen seconds without a message ends a real session with an error; the measurement loop has a 240-second wall-clock bound. Capture duration also ends the session automatically. Disconnects and failures release capacity. Cancellation waits for in-flight model work before closing workers; it cannot forcibly terminate a stuck native call. Initialization and inference run off the event loop so health requests remain responsive.
+
+P2 adds `agent_mode` to `/health` and `ready`, plus an ephemeral session ID to `ready`. Existing event names and commands are preserved. `OrchestrationService` runs event-scoped coaching/report graphs asynchronously with strict identities, consent gates, a 1.5-second coaching deadline, and final coach-controlled eligibility/commitment. See [the P2 guide](langgraph-p2.md) for contracts and all four modes.
 
 ## Verification
 

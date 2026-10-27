@@ -1,5 +1,7 @@
 # Completion plan
 
+**P2 update, October 27, 2026:** M1–M5 are implemented; [langgraph-p2.md](langgraph-p2.md) is the current architecture and readiness reference. Typed LangGraph workflows, strict evidence/action contracts, four agent modes, cancellation/deadline controls, assisted UI provenance, adaptive pre-commit selection, bounded outcome history, and an A/B/C evaluation harness are integrated. [Verification](verification.md#p2-langgraph-verification) distinguishes automated, live-provider, and synthetic-checkpoint results from outstanding physical-camera, controlled throughput, reference-device, Docker, and hosting gates. The review below is historical; its unsupported-narrative gap was resolved by P1 canonical claims and strengthened in P2.
+
 Reviewed October 20, 2026 against commit `385e9ff` and the current working tree. This is the remaining-work sequence; [implementation-plan.md](implementation-plan.md) describes the original scope.
 
 ## Current status
@@ -53,6 +55,8 @@ These can proceed while tasks 1–3 are implemented:
 **Done when:** a test first displays an accepted estimate, then freezes capture while leaving the socket open, and verifies that the estimate disappears within the defined freshness limit. Cover continuing ACKs without new samples, normal capture, and restart without a timer from the previous session affecting it.
 
 ### 2. Constrain AI conclusions to supported facts
+
+**Status:** implemented in P1 and strengthened/graph-integrated in P2. Report models select canonical typed claims/references; they cannot author factual narrative or overwrite statistics. Adversarial regressions pass; see the P2 guide.
 
 **Depends on:** none. **Scope:** `backend/pulsepilot/agents.py`, schemas if necessary, and `backend/tests/test_agents.py`.
 
