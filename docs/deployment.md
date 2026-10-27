@@ -6,15 +6,17 @@ Use a persistent inference process. The initial capacity limit is one real measu
 
 Follow README setup, start Python on port 8000 and Next.js on 3000. The first measurement initializes the real checkpoint and JAX compilation; later sessions reuse compiled functions with independent temporal state. `GET /health` distinguishes installed weights from a successfully initialized model.
 
+For a local production frontend, run `pnpm build` followed by `pnpm start` from the repository root while Python remains running. The startup script defaults to `127.0.0.1:3000`; set `PORT` or `HOSTNAME` to override those values.
+
 ## Vercel frontend and persistent inference
 
 1. Provision a persistent Linux CPU or CUDA GPU host that supports long-lived WebSockets. Build `backend/Dockerfile` from the repository root. The default image uses CPU JAX; do not claim GPU acceleration merely because the host has a GPU. A CUDA deployment needs a separately tested compatible JAX/CUDA image.
 2. Serve the backend over HTTPS/WSS. Set `ALLOWED_ORIGINS` to the exact frontend HTTPS origin, not `*`. Keep one Uvicorn worker. The host must allow initialization and sessions lasting up to four minutes.
 3. Authenticate Vercel, then set `NEXT_PUBLIC_BACKEND_URL` to that HTTPS backend before building/deploying. The frontend includes no secrets.
-4. Add `MODEL_API_KEY` to the Python service when hackathon access is provided. Users must additionally opt in before numerical summaries are sent to Meta.
+4. Optionally set server-only `MODEL_API_KEY`, `META_MODEL`, and `AGENT_MODE` on the Python service. Users must additionally opt in before numerical summaries are sent to Meta.
 5. Visit the deployed site, perform a real consenting-user camera session, verify actual frame rate and no stale BPM, finish, and inspect report provenance. Confirm idle/disconnect frees the inference slot.
 
-The Vercel CLI installed in the development environment reported 53.2.0 and no saved credentials. Update using `npm i -g vercel@latest` before deployment. No hosted deployment is certified by a local build.
+Update the Vercel CLI using `npm i -g vercel@latest` before deployment and authenticate with the intended hosting account. No hosted deployment is certified by a local build.
 
 ## Single-origin container demo
 
@@ -32,7 +34,7 @@ P2 defaults to `AGENT_MODE=assist`. Compose passes `${AGENT_MODE:-assist}` to th
 
 ## Temporary demo without containers
 
-Build Next.js with `INFERENCE_INTERNAL_URL=http://127.0.0.1:8000 pnpm build`, then start it on a local port. Next.js proxies the fixed `/health` and `/ws/measure` routes to Python. Leave `NEXT_PUBLIC_BACKEND_URL` unset so a public browser uses its own HTTPS origin.
+Build Next.js with `INFERENCE_INTERNAL_URL=http://127.0.0.1:8000 pnpm build`, then start it with `PORT=3001 pnpm start`. Next.js proxies the fixed `/health` and `/ws/measure` routes to Python. Leave `NEXT_PUBLIC_BACKEND_URL` unset so a public browser uses its own HTTPS origin.
 
 Run `cloudflared tunnel --url http://127.0.0.1:3001` against that production server, then add the generated exact HTTPS origin to Python's `ALLOWED_ORIGINS` and restart Python. [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) require no account, but the random URL expires when the tunnel stops and has no uptime guarantee. This is a temporary demonstration, not permanent hosting. Keep the Mac awake and all three processes running.
 

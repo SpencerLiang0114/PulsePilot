@@ -7,7 +7,7 @@ The persistent FastAPI service in `backend/pulsepilot/app.py` implements the pro
 From the repository root:
 
 ```sh
-uv run scripts/fetch_facephys.py
+uv run --project backend python scripts/fetch_facephys.py
 cd backend
 uv sync --frozen
 # On first setup only; preserve an existing .env.
@@ -21,7 +21,7 @@ No API key is required for FacePhys. Optional Muse interpretation uses server-on
 
 ## Health
 
-`GET /health` returns process health, checkpoint presence, `busy`, `model_ready`, `model_error`, and `ai_configured`.
+`GET /health` returns process health, checkpoint presence, `busy`, `model_ready`, `model_error`, `ai_configured`, and `agent_mode`.
 
 `model_ready` means the most recent model initialization succeeded without a subsequently observed model failure. It starts false and resets during startup or on failure; it can remain true between sessions. It does not mean a model is currently assigned, a face is visible, or a BPM is available. `busy` remains true until model work and cleanup finish, including after request cancellation. A missing checkpoint does not disable simulation or the health endpoint.
 

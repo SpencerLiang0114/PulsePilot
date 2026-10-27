@@ -6,9 +6,9 @@ P2 uses two event-scoped LangGraph workflows behind `OrchestrationService`; see 
 
 Meta lists `muse-spark-1.3` through its [Model API](https://dev.meta.ai/docs/models). Use server-only `MODEL_API_KEY` and `https://api.meta.ai/v1/chat/completions`. The [structured-output cookbook](https://dev.meta.ai/docs/cookbook/structured-output) documents `response_format: {type: "json_schema", json_schema: {name, strict, schema}}`. Pydantic validates responses again; reject unknown fields, invalid evidence identifiers, and instructions outside the deterministic eligible set.
 
-The user explicitly requested Python orchestration and Meta models. Python calls the documented HTTPS endpoint directly. Credentials stay in ignored `backend/.env`; no key is sent to the browser. P1 uses only Meta. The other supplied hackathon credentials are stored locally and are not used by this loop. `httpx[socks]` supports the development machine's configured proxy.
+Python calls the Meta HTTPS endpoint directly through the existing adapter. Credentials stay in ignored `backend/.env`; no key is sent to the browser. The graph provider uses only `MODEL_API_KEY` and `META_MODEL`. `httpx[socks]` supports configured SOCKS proxies.
 
-Requests use the documented [`reasoning_effort: "minimal"`](https://dev.meta.ai/docs/reasoning) to fit interactive decisions. Authenticated structured decisions and a complete synthetic closed loop have been verified; see [the saved live run](p1-live-verification.json). This is a software integration check, not a physical-camera or reference-device validation.
+Requests use [`reasoning_effort: "minimal"`](https://dev.meta.ai/docs/reasoning). In the [recorded P2 live run](p2-live-verification.json), both coaching requests exceeded the 1.5-second application deadline and used deterministic fallback; the final structured report validated. Fixture tests cover accepted adaptive choices. These checks establish software behavior, not physical-camera performance or reference-device accuracy.
 
 ## MeasurementCoach
 
@@ -59,7 +59,7 @@ uv run python ../scripts/evaluate_p2.py --output ../docs/p2-evaluation.json
 uv run python ../scripts/verify_sensing_agent.py --live --output ../docs/p2-live-verification.json
 ```
 
-`test_sensing_agent.py`, `test_graph*.py`, and `test_adaptive_coaching.py` cover routing, strict schemas, session/event identity, selection/abstention, unsupported explanations, timeouts/auth failures, provenance, disjoint windows, bounded adaptation, stale results, cancellation, frame ACK continuity, consent, safe telemetry, and complete WebSocket loops in every mode. Browser tests cover mode selection, consent, pending/committed instructions, explanation provenance and report lifecycle. See [P2 verification](verification.md#p2-langgraph-verification) for current results; [P1 validation](p1-verification.md) is historical evidence.
+`test_sensing_agent.py`, `test_graph*.py`, and `test_adaptive_coaching.py` cover routing, strict schemas, session/event identity, selection/abstention, unsupported explanations, timeouts/auth failures, provenance, disjoint windows, bounded adaptation, stale results, cancellation, frame ACK continuity, consent, safe telemetry, and complete WebSocket loops in every mode. Browser tests cover mode selection, consent, pending/committed instructions, explanation provenance and report lifecycle. See [P2 verification](verification.md#p2-langgraph-verification) for the recorded results and limits.
 
 ## SAM decision
 

@@ -1,72 +1,131 @@
 # PulsePilot
 
-A webcam heart-rate research application combining pretrained FacePhys sensing, camera coaching, measured intervention outcomes, and evidence-grounded session reports.
+A webcam heart-rate research application with live camera input, recorded-video replay, and a labeled synthetic demo. PulsePilot combines frozen FacePhys inference, deterministic signal validation, closed-loop measurement coaching, and evidence-grounded reports. LangGraph coordinates optional Meta Muse Spark assistance around the sensing pipeline.
 
-The browser captures video; a persistent Python service runs frozen `FacePhys.rlap`; Muse Spark interprets structured metrics when configured. The website supports real camera input, recorded-video replay, and clearly labeled synthetic quality scenarios.
+## Start locally
 
-Temporary demo, verified October 20, 2026: **[Open PulsePilot](https://painting-everybody-richardson-cape.trycloudflare.com)**. This URL depends on the development Mac and tunnel staying running; it is not permanent hosting. The current local production preview is at http://127.0.0.1:3001.
+Requires **Python 3.12**, **uv**, **Node.js 22+**, and **pnpm** using the version declared in `package.json`.
 
-## Development
-
-Requires Node.js 22+, pnpm, uv, and Python 3.12.
+One-time setup, from the repository root:
 
 ```sh
-pnpm install
-uv run scripts/fetch_facephys.py
-cd backend
-uv sync
-cp .env.example .env
-uv run uvicorn pulsepilot.app:app --host 127.0.0.1 --port 8000
+pnpm install --frozen-lockfile
+uv sync --project backend --frozen
+# Skip the checkpoint download if you only want the synthetic demo.
+uv run --project backend python scripts/fetch_facephys.py
+# Create configuration without replacing an existing .env.
+test -e backend/.env || cp backend/.env.example backend/.env
 ```
 
-In another terminal, run `pnpm dev` at the repository root and open http://localhost:3000. Set `MODEL_API_KEY` in `backend/.env` to enable Muse Spark. No key is needed for FacePhys, deterministic guidance, or numerical reports. Users opt in separately before sending structured metrics to Meta. Never add an API key to a `NEXT_PUBLIC_` variable.
+Start the backend in one terminal:
 
-The setup dialog offers passive observation, deterministic rules, or consented Muse guidance. P2 uses event-scoped LangGraph coaching/reporting workflows. Set backend `AGENT_MODE=off|observe|assist|adaptive`; the default `assist` keeps action selection deterministic and permits validated explanations. `adaptive` explicitly enables pre-commit selection among eligible actions using bounded measured outcome history. Coaching graphs have a 1.5-second deadline with deterministic fallback. See [the P2 guide](docs/langgraph-p2.md) for contracts, mode/consent behavior, local commands, evaluation results, and empirical limits.
+```sh
+cd backend
+uv run uvicorn pulsepilot.app:app --host 127.0.0.1 --port 8000 --workers 1
+```
 
-The upstream source/checkpoint is downloaded to ignored `.vendor/open-rppg` at a pinned commit. Its source is MIT, but the upstream license distinguishes pretrained-model rights; see [integration notes](docs/facephys-integration.md).
+Start the frontend in another terminal, from the repository root:
 
-## Checks
+```sh
+pnpm dev
+```
+
+Open **http://127.0.0.1:3000**. The backend health endpoint is **http://127.0.0.1:8000/health**. Choose **Explore the demo** to try the complete flow without a camera, checkpoint, or model API key. A real camera or recording session needs the downloaded checkpoint; its first initialization includes JAX warmup. Stop either service with `Ctrl+C`.
+
+### Optional Muse Spark configuration
+
+Set these server-only values in `backend/.env`, then restart the backend:
+
+```dotenv
+MODEL_API_KEY=your-meta-api-key
+META_MODEL=muse-spark-1.3
+AGENT_MODE=assist
+```
+
+AI requests also require explicit consent in the session setup dialog. Without a key or consent, deterministic measurement, guidance, and reports remain available. Keep credentials out of frontend code and `NEXT_PUBLIC_` variables.
+
+## Architecture
+
+The Next.js/React frontend owns capture, preview, charts, session controls, and report export. A persistent FastAPI service owns FacePhys/JAX inference and session resources. LangGraph runs only on coaching and report events; frame processing and live BPM updates continue independently of model requests.
+
+```mermaid
+flowchart TD
+    Browser[Next.js browser] -->|Timestamped PNG frames / commands| API[FastAPI session]
+    API --> Sensing[FacePhys / JAX + camera metrics]
+    Sensing --> Gate[ReliabilityGate: accepted BPM and SQI]
+    Gate --> Coach[MeasurementCoach: timing, commitment, outcomes]
+    Gate --> Report[Deterministic statistics and evidence]
+    Coach --> Report
+    Coach -->|Decision / explanation events| Graphs[LangGraph coaching and report workflows]
+    Report -->|Evidence events| Graphs
+    Graphs -->|Consented structured metrics| Muse[Meta Muse Spark]
+    Muse -->|Action proposals / claim references| Graphs
+    Graphs -->|Validated results or fallback| API
+    API -->|ACKs, samples, coaching, reports| Browser
+```
+
+The boundaries are explicit:
+
+- **Sensing and reliability:** FacePhys estimates the pulse signal; deterministic checks decide which heart-rate windows are usable. The model cannot alter thresholds or measurements.
+- **Intervention control:** MeasurementCoach commits instructions and owns the five-second baseline, three-second response interval, five-second observation window, and eight-second cooldown. Outcomes use measured pre/post quality and may be inconclusive.
+- **Agent orchestration:** Typed event graphs request an eligible action or an explanation, validate identity and applicability, and return a result. Coaching has a 1.5-second application deadline with deterministic fallback. Late, duplicate, and stale decisions cannot replace an active instruction.
+- **Reporting:** The server computes statistics and a canonical claim catalogue. Muse can select compatible claim references; the server renders their factual text. The numerical report arrives before optional AI analysis.
+
+One real inference session runs per backend process, with separate temporal state for every connection. Session-local outcome history is bounded; there is no persistent user memory or database. See the [P2 implementation guide](docs/langgraph-p2.md) for graph diagrams, contracts, routing, validation, cancellation, and telemetry.
+
+## Agent modes
+
+Configure `AGENT_MODE` in `backend/.env` or the backend process environment:
+
+| Mode | Behavior |
+|---|---|
+| `off` | Deterministic coaching and reports; graphs do not execute. |
+| `observe` | Graphs collect diagnostics without changing visible coaching decisions or factual reports. |
+| `assist` | Rules select actions; timely validated Muse explanations and report selections are allowed. **Default.** |
+| `adaptive` | Validated Muse proposals may select a currently eligible action before MeasurementCoach commits it. |
+
+Each session independently chooses `passive`, `rules`, or `meta` coaching. Passive never produces instructions; rules never requests model coaching. Separately consented report analysis may still run in enabled modes. Adaptive action selection requires both `AGENT_MODE=adaptive` and the session's Meta preference and consent.
+
+## Checks and evaluation
+
+From the repository root:
 
 ```sh
 pnpm check
 pnpm build
-cd backend
-uv run pytest
-uv run python ../scripts/smoke_facephys.py
+uv run --project backend pytest -q backend/tests
+uv run --directory backend ruff check pulsepilot tests ../scripts
 ```
 
-With both services running, `pnpm test:e2e` runs the browser tests. Set `PULSEPILOT_TEST_URL` to run them against an HTTPS deployment. The camera and recording tests generate synthetic frames, never access a physical camera, and assert that blank frames cannot produce a usable BPM.
-
-Replay a consenting user's recording through the real estimator:
+With both services running, `pnpm test:e2e` runs browser tests. Install Chromium once with `pnpm exec playwright install chromium` if needed. Camera and recording fixtures use synthetic frames; they do not validate a person's heart rate. Optional checkpoint and policy checks:
 
 ```sh
-cd backend
-uv run python ../scripts/replay.py /path/to/video.mp4 --output /path/to/report.json
+uv run --project backend python scripts/smoke_facephys.py
+RUN_FACEPHYS_INTEGRATION=1 uv run --project backend pytest -q backend/tests/test_facephys_integration.py
+uv run --project backend python scripts/evaluate_p2.py --output /tmp/pulsepilot-evaluation.json
 ```
 
-Add `--coaching passive` for the passive baseline or `--reference /path/to/reference.csv` for a synchronized `t,bpm` comparison. No reference accuracy is reported without supplied reference data.
-
-See [verification](docs/verification.md) for actual results and remaining external gates.
+The A/B/C harness compares deterministic, assisted, and adaptive policies on seeded synthetic traces without remote model requests. Recorded results and the separate opt-in live Muse check are in the [verification record](docs/verification.md); the [evaluation protocol](docs/evaluation.md) distinguishes fixture behavior, recordings, human sessions, and reference-device measurements.
 
 ## Deployment
 
-Deploy the Next.js frontend to Vercel with `NEXT_PUBLIC_BACKEND_URL=https://your-inference-host`. Run the Python Dockerfile on a persistent CPU/GPU host with WebSocket support. Set `ALLOWED_ORIGINS` to the exact HTTPS frontend origin, `FACEPHYS_ROOT` to the downloaded upstream tree, and server-only `MODEL_API_KEY`. Start with one inference session per process and benchmark before increasing capacity.
+The included `docker compose up --build` stack serves the frontend and persistent inference backend through Caddy at http://localhost:8080. Compose passes `AGENT_MODE` to the backend and defaults to `assist`. It reads `MODEL_API_KEY` from the shell or Compose environment, not `backend/.env`.
 
-A second option is `docker compose up --build` behind a TLS reverse proxy forwarding `/ws/` and `/health` to Python and the remaining paths to Next.js. For a short demo, tunnel this same-origin proxy over HTTPS; do not point a public HTTPS website at plain HTTP localhost.
+For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-inference-host` and configure the backend's exact `ALLOWED_ORIGINS`. Keep physiological inference in the persistent Python service. See the [deployment runbook](docs/deployment.md) for HTTPS/WSS, proxy configuration, and production startup.
 
-A persistent hosted deployment requires hosting authentication and a reachable inference service. Do not treat a frontend-only URL as a completed demonstration. The installed Vercel CLI reported 53.2.0; upgrade before deployment with `npm i -g vercel@latest`.
+## Documentation
 
-The current temporary URL uses a same-origin Next.js proxy and Cloudflare tunnel to the local inference process. See the [deployment runbook](docs/deployment.md) for hosted and container alternatives.
-
-## Design
-
-- [Architecture](docs/architecture.md)
-- [FacePhys source/API audit](docs/facephys-integration.md)
-- [Backend service and WebSocket protocol](docs/backend-service.md)
-- [Website experience](docs/web-experience.md)
-- [Agent design and verified Meta APIs](docs/agent-design.md)
-- [LangGraph P2 implementation and verification](docs/langgraph-p2.md)
-- [Phases and acceptance criteria](docs/implementation-plan.md)
+- [System architecture](docs/architecture.md)
+- [LangGraph P2 workflows and contracts](docs/langgraph-p2.md)
+- [Coaching and report agent design](docs/agent-design.md)
+- [Backend setup and WebSocket protocol](docs/backend-service.md)
+- [FacePhys integration, heatmap, and waveform](docs/facephys-integration.md)
+- [Frontend experience](docs/web-experience.md)
 - [Evaluation protocol](docs/evaluation.md)
+- [Verification results and remaining limits](docs/verification.md)
 
-PulsePilot does not diagnose conditions. A stable rPPG waveform does not guarantee an accurate heart rate. Frames are processed transiently; reports remain in page memory until explicitly exported or the page closes.
+## Privacy and limits
+
+Video frames go to the configured inference service with consent and are discarded after processing. Muse receives only separately consented numerical summaries and intervention history; it never receives images. Reports stay in browser memory for the page session and can be exported as JSON or printed. External tracing is disabled.
+
+PulsePilot is a research application, not a medical device. Signal periodicity and before/after quality changes do not establish heart-rate accuracy or causal coaching benefit. Human-camera performance, synchronized reference accuracy, and durable hosting remain unverified. The pinned upstream source and checkpoint have distinct licensing considerations; see [FacePhys integration](docs/facephys-integration.md#licensing-limitation).

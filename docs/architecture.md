@@ -41,7 +41,7 @@ The start dialog explicitly explains that frames leave the browser for the confi
 | Local Next.js + local inference, both through one HTTPS tunnel | Short hackathon demonstration | Laptop must remain awake; tunnel URL is temporary; capacity is one measurement |
 | HTTPS frontend + plain localhost backend | Local development only | Mixed-content/private-network restrictions vary; do not promise public compatibility |
 
-Authenticated Muse requests and a complete synthetic decision/outcome loop have been verified; see [P1 validation](p1-verification.md). Persistent hosting and human-camera validation remain external gates. The earlier temporary HTTPS tunnel is historical demonstration evidence. The implementation exposes unavailable services and retains deterministic measurements and reports.
+The [P2 verification record](verification.md#p2-langgraph-verification) distinguishes fixture, checkpoint, browser, and live-provider checks. In the recorded live P2 run, coaching requests used deadline fallback and the final Muse report validated. Timely live adaptive selection, persistent hosting, and human-camera validation remain unverified. The application retains deterministic measurements and reports when optional services are unavailable.
 
 ## Repository
 

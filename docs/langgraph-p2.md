@@ -1,6 +1,6 @@
 # PulsePilot P2: event-driven LangGraph orchestration
 
-Implemented October 27, 2026. This document is the current P2 reference; P1 verification files describe historical runs. Physiological sensing, reliability thresholds, numerical reporting, and intervention timing remain deterministic. LangGraph 1.2.18 is locked by `backend/uv.lock` and runs on the existing Python 3.12 backend.
+Implemented October 27, 2026. This document is the P2 technical reference; [verification.md](verification.md) records the executed checks and their limits. Physiological sensing, reliability thresholds, numerical reporting, and intervention timing remain deterministic. LangGraph 1.2.18 is locked by `backend/uv.lock` and runs on the existing Python 3.12 backend.
 
 ## Implementation map
 
@@ -98,24 +98,7 @@ The existing persistent FastAPI/WebSocket deployment and Next.js proxy remain in
 
 ## Run locally
 
-From the repository root:
-
-```sh
-pnpm install
-cd backend
-uv sync
-# For a new setup only: cp .env.example .env
-# Put MODEL_API_KEY and optional META_MODEL in the ignored backend/.env.
-AGENT_MODE=assist uv run uvicorn pulsepilot.app:app --host 127.0.0.1 --port 8000
-```
-
-In another terminal at the root:
-
-```sh
-pnpm dev
-```
-
-Use `AGENT_MODE=off`, `observe`, `assist`, or `adaptive` in the same backend command. In the UI choose passive/rules/meta and explicitly opt into numerical-metric transfer as desired. Real camera/recording inference requires the existing FacePhys checkpoint (`uv run scripts/fetch_facephys.py` from the root for a new setup). Simulation needs no checkpoint or key.
+Follow the [README startup guide](../README.md#start-locally) for prerequisites, locked dependency installation, checkpoint setup, and the two service commands. Set `MODEL_API_KEY`, optional `META_MODEL`, and `AGENT_MODE=off|observe|assist|adaptive` in the ignored `backend/.env`, then restart the backend. In the UI choose passive/rules/meta and explicitly opt into numerical-metric transfer as desired. Real camera/recording inference requires the FacePhys checkpoint; simulation needs no checkpoint or key.
 
 ## Evaluation and observed verification
 
