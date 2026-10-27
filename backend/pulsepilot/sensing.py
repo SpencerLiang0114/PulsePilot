@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .schemas import CameraMetrics, Sample
+from .schemas import CameraMetrics, CandidateAction, Sample
 
 
 @dataclass(frozen=True)
@@ -39,6 +39,34 @@ ACTIONS = {
     "cadence": "Close other camera apps and tabs to help the camera keep a steady frame rate.",
     "signal": "Stay still a little longer while the pulse signal settles.",
 }
+
+# Only these scalar observations are sent to the decision endpoint.
+ISSUE_METRICS = {
+    "face": ("face_visible", "face_count"),
+    "visibility": ("visibility_proxy",), "position": ("center_offset",),
+    "far": ("face_size",), "close": ("face_size",),
+    "angle": ("yaw_proxy", "roll_degrees"), "dark": ("brightness",),
+    "bright": ("brightness",), "uneven": ("light_imbalance",),
+    "flicker": ("light_change",), "motion": ("motion",),
+    "cadence": ("fps",), "signal": ("sqi",),
+}
+
+
+def observations(sample: Sample) -> dict[str, float | bool]:
+    values = sample.camera.model_dump(exclude={"bbox", "landmarks"})
+    return {**values, "fps": sample.fps, **({"sqi": sample.sqi} if sample.sqi is not None else {})}
+
+
+def candidate_actions(sample: Sample, persistent: set[str]) -> list[CandidateAction]:
+    detected = issues(sample)
+    # Face validity and capture cadence are handled by deterministic policy.
+    safety = next((issue for issue in ("face", "cadence") if issue in detected), None)
+    eligible = [safety] if safety else detected
+    metrics = observations(sample)
+    return [CandidateAction(
+        action_id=issue, issue=issue, instruction=ACTIONS[issue], priority=list(ACTIONS).index(issue),
+        observations={key: metrics[key] for key in ISSUE_METRICS[issue] if key in metrics},
+    ) for issue in eligible if issue in persistent]
 
 
 def issues(sample: Sample) -> list[str]:

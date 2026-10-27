@@ -82,6 +82,9 @@ async def measurement(ws: WebSocket):
     estimator = None
     has_slot = False
     pending: set[asyncio.Task] = set()
+    coach = None
+    decision_task = None
+    decision_proposal_id = None
     samples = []
     ai_status = "not_configured"
     initializing = False
@@ -99,7 +102,10 @@ async def measurement(ws: WebSocket):
             ai_status = "ready"
         elif not config.ai_consent:
             ai_status = "not_requested"
-        coach = MeasurementCoach(passive=config.coaching == "passive")
+        coach = MeasurementCoach(mode="meta" if ai_status == "ready" and config.coaching == "meta"
+                                 else "passive" if config.coaching == "passive" else "rules",
+                                 rule_status=f"fallback_{ai_status}" if config.coaching == "meta" else "rules")
+        decision_agent = agents.SensingDecisionAgent()
         if config.mode != "simulation":
             if model_lock.locked():
                 await send({"type": "error", "message": "The inference service is measuring another session. Try again shortly."})
@@ -120,23 +126,25 @@ async def measurement(ws: WebSocket):
         last_heatmap_tick = -1
         wall_started = time.monotonic()
 
-        async def explain(item, sample):
-            decision = await agents.enrich_coach(item, sample)
-            if decision is not None and coach.active is item:
-                item.source, item.explanation = "muse", decision.explanation
-                with suppress(RuntimeError, WebSocketDisconnect):
-                    await send({"type": "coach", "interventions": [i.model_dump() for i in coach.interventions]})
-
         async def emit(sample):
-            nonlocal last_sample
+            nonlocal last_sample, decision_task, decision_proposal_id
             samples.append(sample)
             last_sample = sample.t
-            intervention = coach.update(sample)
-            if intervention and ai_status == "ready" and config.coaching == "meta":
-                task = asyncio.create_task(explain(intervention, sample))
-                pending.add(task)
-                task.add_done_callback(pending.discard)
+            coach.update(sample, target-sample.t)
+            if decision_task is not None:
+                if coach.proposal is None or coach.proposal.proposal_id != decision_proposal_id:
+                    decision_task.cancel()
+                if decision_task.done():
+                    if not decision_task.cancelled():
+                        coach.resolve(decision_proposal_id, decision_task.result(), sample, target-sample.t)
+                    decision_task = None
+            if coach.proposal is not None and decision_task is None:
+                decision_proposal_id = coach.proposal.proposal_id
+                decision_task = asyncio.create_task(decision_agent.decide(coach.proposal))
+                pending.add(decision_task)
+                decision_task.add_done_callback(pending.discard)
             await send({"type": "sample", "sample": sample.model_dump(),
+                        "coaching_state": coach.state, "coaching_mode": config.coaching,
                         "interventions": [i.model_dump() for i in coach.interventions]})
 
         while time.monotonic()-wall_started < SESSION_TIMEOUT:
@@ -169,6 +177,11 @@ async def measurement(ws: WebSocket):
             if estimator.start_time is not None and timestamp-estimator.start_time > 181:
                 raise ValueError("Capture timestamp exceeded the session limit.")
             await run_inference(estimator.push, rgb, timestamp)
+            if coach.proposal and (not estimator.camera.face_visible or estimator.camera.face_count != 1):
+                coach.proposal = None
+                coach.state = "MONITORING"
+                if decision_task is not None:
+                    decision_task.cancel()
             elapsed = timestamp-estimator.start_time
             heatmap_tick = math.floor(elapsed*60 + 1e-6)
             if heatmap_tick > last_heatmap_tick:
@@ -215,6 +228,8 @@ async def measurement(ws: WebSocket):
         import logging
         logging.getLogger("pulsepilot").exception("Inference session failed")
     finally:
+        if coach is not None:
+            coach.finish(samples[-1].t if samples else 0)
         for task in pending:
             task.cancel()
         if pending:

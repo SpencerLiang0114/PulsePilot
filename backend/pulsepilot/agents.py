@@ -1,11 +1,20 @@
+import asyncio
 import json
 import os
-import re
 
 import httpx
 from pydantic import BaseModel
 
-from .schemas import Analysis, CoachDecision, Intervention, Report, Sample
+from .schemas import (
+    DECISION_EXPLANATIONS,
+    AgentDecision,
+    Analysis,
+    DecisionContext,
+    DecisionResult,
+    Report,
+    ReportInterpretation,
+    Statement,
+)
 
 META_URL = "https://api.meta.ai/v1/chat/completions"
 SYSTEM = """You interpret webcam rPPG measurement conditions, not cardiovascular health.
@@ -25,18 +34,33 @@ async def structured(schema: type[BaseModel], payload: dict, instruction: str):
     if not key:
         raise RuntimeError("Meta key is not configured")
     async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=4.0)) as client:
+        wire_schema = schema.model_json_schema()
+
+        def require_fields(node):
+            if isinstance(node, dict):
+                node.pop("default", None)
+                if "properties" in node:
+                    node["required"] = list(node["properties"])
+                for value in node.values():
+                    require_fields(value)
+            elif isinstance(node, list):
+                for value in node:
+                    require_fields(value)
+
+        require_fields(wire_schema)
         response = await client.post(
             META_URL,
             headers={"Authorization": f"Bearer {key}"},
             json={
                 "model": os.getenv("META_MODEL", "muse-spark-1.3"),
+                "reasoning_effort": "minimal",
                 "messages": [
                     {"role": "system", "content": SYSTEM + "\n" + instruction},
                     {"role": "user", "content": json.dumps(payload, allow_nan=False)},
                 ],
                 "response_format": {
                     "type": "json_schema",
-                    "json_schema": {"name": schema.__name__, "strict": True, "schema": schema.model_json_schema()},
+                    "json_schema": {"name": schema.__name__, "strict": True, "schema": wire_schema},
                 },
             },
         )
@@ -45,44 +69,71 @@ async def structured(schema: type[BaseModel], payload: dict, instruction: str):
         return schema.model_validate_json(content)
 
 
-def safe_text(text: str) -> bool:
-    prohibited = r"\d|diagnos|arrhythm|tachycard|bradycard|heart disease|healthy heart|accurate heart|improved accuracy|guarantee"
-    return not re.search(prohibited, text, re.IGNORECASE)
+def validate_decision(decision: AgentDecision, context: DecisionContext) -> bool:
+    if decision.explanation != DECISION_EXPLANATIONS[decision.reason]:
+        return False
+    if decision.action_id is None:
+        return decision.reason == "wait"
+    if decision.reason == "wait" or decision.action_id not in {c.action_id for c in context.candidates}:
+        return False
+    if decision.reason == "try_alternative":
+        return any(r.outcome in ("unchanged", "worsened") and r.action_id != decision.action_id
+                   for r in context.outcomes)
+    return True
 
 
-async def enrich_coach(item: Intervention, sample: Sample) -> CoachDecision | None:
-    try:
-        decision = await structured(
-            CoachDecision,
-            {"eligible_issue": item.issue, "action": item.action,
-             "camera": sample.camera.model_dump(), "sqi": sample.sqi, "fps": sample.fps},
-            "Explain why the single eligible correction may help the measurement. "
-            "Return exactly that issue. Do not propose another action or claim an outcome.",
-        )
-        if decision.issue != item.issue or not safe_text(decision.explanation):
-            return None
-        return decision
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, RuntimeError):
-        return None
+class SensingDecisionAgent:
+    DEADLINE = 2.0
+
+    async def decide(self, context: DecisionContext) -> DecisionResult:
+        try:
+            decision = await asyncio.wait_for(structured(
+                AgentDecision,
+                {"context": context.model_dump(), "supported_explanations": DECISION_EXPLANATIONS},
+                "Select one eligible action_id, or null to abstain. Use only an offered reason and its exact "
+                "supported explanation. Consider SQI trend, remaining time and recent outcomes. Prefer a useful "
+                "alternative after unchanged or worsened outcomes and consider previously improved conditions. "
+                "Inconclusive is insufficient evidence, not failure. "
+                "You cannot alter measurements, thresholds or instructions. Never claim causal benefit.",
+            ), timeout=self.DEADLINE)
+            decision = AgentDecision.model_validate(decision.model_dump())
+            if not validate_decision(decision, context):
+                return DecisionResult(status="invalid")
+            return DecisionResult(status="selected", decision=decision)
+        except TimeoutError:
+            return DecisionResult(status="timeout")
+        except (ValueError, KeyError, IndexError, TypeError):
+            return DecisionResult(status="invalid")
+        except (httpx.HTTPError, RuntimeError, ImportError):
+            return DecisionResult(status="unavailable")
 
 
 async def analyze_report(report: Report) -> Report:
     try:
-        analysis = await structured(
-            Analysis, {"evidence": report.evidence},
-            "Write the four report sections. Every statement must cite existing evidence_ids. "
-            "Explain meaningful trends and limitations, not just restate facts. Only describe an "
-            "intervention as improved when its cited record explicitly has outcome improved.",
+        interpretation = await structured(
+            ReportInterpretation, {"claims": [c.model_dump() for c in report.claims]},
+            "Select the most useful supplied claims for each report section. Copy each complete typed claim "
+            "exactly, including its section, metric, value, evidence_id and text. Do not write new prose or "
+            "modify a claim. Each section must contain one to four distinct claims from that section.",
         )
-        for section in analysis.model_dump().values():
-            for item in section:
-                refs = item["evidence_ids"]
-                if any(ref not in report.evidence for ref in refs) or not safe_text(item["text"]):
-                    raise ValueError("Unsupported statement")
-                if re.search(r"\bimprov", item["text"], re.IGNORECASE):
-                    cited = [i for i in report.interventions if i.id in refs]
-                    if not cited or any(i.outcome != "improved" for i in cited):
-                        raise ValueError("Unsupported intervention outcome")
+        interpretation = ReportInterpretation.model_validate(interpretation.model_dump())
+        catalogue = {c.claim_id: c for c in report.claims}
+        sections = {}
+        for section in type(interpretation).model_fields:
+            selected = getattr(interpretation, section)
+            if len({c.claim_id for c in selected}) != len(selected):
+                raise ValueError("Duplicate claims")
+            statements = []
+            for claim in selected:
+                canonical = catalogue.get(claim.claim_id)
+                if canonical is None or claim != canonical or claim.section != section:
+                    raise ValueError("Unsupported claim")
+                statements.append(Statement(
+                    kind=canonical.statement_kind,
+                    text=canonical.text, evidence_ids=[canonical.evidence_id],
+                ))
+            sections[section] = statements
+        analysis = Analysis(**sections)
         return report.model_copy(update={"analysis": analysis, "analyst": "muse", "ai_status": "complete"})
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, RuntimeError):
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, RuntimeError, ImportError):
         return report.model_copy(update={"ai_status": "unavailable"})

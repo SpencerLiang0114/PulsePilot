@@ -1,12 +1,11 @@
 import json
 
 import httpx
-import pytest
 from test_sensing import good_sample
 
 from pulsepilot import agents
 from pulsepilot.reports import build_report
-from pulsepilot.schemas import CoachDecision, Intervention, SessionConfig
+from pulsepilot.schemas import DECISION_EXPLANATIONS, AgentDecision, SessionConfig
 
 
 async def test_no_key_preserves_numerical_report(monkeypatch):
@@ -35,37 +34,28 @@ async def test_invented_improvement_rejected(monkeypatch):
     assert (await agents.analyze_report(report)).analyst == "deterministic"
 
 
-async def test_contradictory_coaching_rejected(monkeypatch):
-    async def fake(*args): return CoachDecision(issue="motion", explanation="Keep still.")
-    monkeypatch.setattr(agents, "structured", fake)
-    intervention = Intervention(id="i", issue="dark", action="More light", started_at=5)
-    assert await agents.enrich_coach(intervention, good_sample()) is None
-
-
 async def test_meta_wire_format_and_validated_response(monkeypatch):
     monkeypatch.setenv("MODEL_API_KEY", "test-only-key")
     base = httpx.AsyncClient
     def respond(request):
         payload = json.loads(request.content)
         assert payload["model"] == "muse-spark-1.3"
+        assert payload["reasoning_effort"] == "minimal"
         assert payload["response_format"]["type"] == "json_schema"
         assert payload["response_format"]["json_schema"]["strict"]
         assert payload["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
         assert json.loads(payload["messages"][1]["content"]) == {"brightness": 20}
         assert "input_image" not in request.content.decode()
-        return httpx.Response(200, json={"choices": [{"message": {"content": '{"issue":"dark","explanation":"Face a steady light."}'}}]})
+        content = json.dumps({"action_id": "dark", "reason": "persistent_issue",
+                              "explanation": DECISION_EXPLANATIONS["persistent_issue"]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: base(transport=httpx.MockTransport(respond), **kwargs))
-    result = await agents.structured(CoachDecision, {"brightness": 20}, "Explain conditions.")
-    assert result.issue == "dark"
+    result = await agents.structured(AgentDecision, {"brightness": 20}, "Select an action.")
+    assert result.action_id == "dark"
 
 
-async def test_timeout_keeps_coaching_deterministic(monkeypatch):
+async def test_timeout_keeps_report_deterministic(monkeypatch):
     async def fail(*args): raise httpx.ReadTimeout("slow")
     monkeypatch.setattr(agents, "structured", fail)
-    item = Intervention(id="i", issue="dark", action="More light", started_at=5)
-    assert await agents.enrich_coach(item, good_sample()) is None
-
-
-@pytest.mark.parametrize("text", ["Your healthy heart is accurate.", "Your heart rate is 73.", "This diagnoses arrhythmia."])
-def test_unsupported_text_rejected(text):
-    assert not agents.safe_text(text)
+    report = build_report(SessionConfig(), [good_sample()], [])
+    assert (await agents.analyze_report(report)).ai_status == "unavailable"

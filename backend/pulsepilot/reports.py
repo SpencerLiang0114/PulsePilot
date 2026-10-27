@@ -2,7 +2,16 @@ from datetime import UTC, datetime
 from statistics import mean, median, pstdev
 from uuid import uuid4
 
-from .schemas import Analysis, Intervention, Report, Sample, SessionConfig, Statement, Statistics
+from .schemas import (
+    Analysis,
+    GroundedClaim,
+    Intervention,
+    Report,
+    Sample,
+    SessionConfig,
+    Statement,
+    Statistics,
+)
 from .sensing import ACTIONS, issues
 
 
@@ -55,6 +64,7 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         "There was not enough usable signal to report a heart rate. Improve the setup and repeat the measurement.",
         "heart_rate")]
     valid = [s for s in samples if s.usable and s.bpm is not None]
+    change = None
     if len(valid) >= 10:
         half = len(valid)//2
         change = mean(s.bpm for s in valid[half:])-mean(s.bpm for s in valid[:half])
@@ -80,7 +90,9 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         evidence[item.id] = (
             f"Action: {item.action} Start {item.started_at:.1f}s. "
             f"Pre SQI {item.before_sqi}, post SQI {item.after_sqi}, change {item.delta}. "
-            f"Pre usable {item.before_usable}, post usable {item.after_usable}. Outcome {item.outcome}."
+            f"Pre usable {item.before_usable}, post usable {item.after_usable}. Outcome {item.outcome}. "
+            f"Decision {item.decision_source} ({item.decision_status}); explanation {item.explanation_source}. "
+            f"Observed environmental changes {item.environmental_changes}."
         )
         text = {
             "improved": "Signal periodicity increased after this instruction. The comparison shows an association, not improved accuracy.",
@@ -104,10 +116,31 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
     recommendations = recommendations[:3] + [statement(
         "These estimates are for research and personal observation. A high-quality signal is not a substitute for reference measurement.",
         "limits", "limitation")]
+    analysis = Analysis(summary=summary, quality=quality_sections,
+                        interventions=intervention_sections, recommendations=recommendations)
+    facts = {
+        "heart_rate": ("measurement", "mean_bpm", stats.mean_bpm),
+        "trend": ("measurement", "accepted_half_change_bpm", change),
+        "quality": ("quality", "usable_fraction", stats.usable_fraction),
+        "camera": ("quality", "largest_camera_issue_fraction", max(lighting, motion, alignment)),
+        "interventions": ("outcome", "intervention_count", float(len(interventions))),
+        "limits": ("limitation", "reference_validation", "unavailable"),
+        **{item.id: ("outcome", "outcome", item.outcome) for item in interventions},
+    }
+    claims = []
+    for section in type(analysis).model_fields:
+        for index, item in enumerate(getattr(analysis, section)):
+            ref = item.evidence_ids[0]
+            kind, metric, value = facts[ref]
+            if item.kind == "limitation":
+                kind = "limitation"
+            claims.append(GroundedClaim(
+                claim_id=f"{section}-{index}", section=section, kind=kind, evidence_id=ref,
+                metric=metric, value=value, text=item.text, statement_kind=item.kind,
+            ))
     return Report(
         id=str(uuid4()), created_at=datetime.now(UTC).isoformat(), mode=config.mode, stats=stats,
         samples=[s.model_copy(update={"waveform": [], "waveform_times": []}) for s in samples],
         interventions=[i.model_copy(deep=True) for i in interventions], evidence=evidence,
-        analysis=Analysis(summary=summary, quality=quality_sections,
-                          interventions=intervention_sections, recommendations=recommendations),
+        analysis=analysis, claims=claims,
     )
