@@ -47,14 +47,16 @@ class Sample(StrictModel):
     latency_ms: float = 0
     camera: CameraMetrics = Field(default_factory=CameraMetrics)
     waveform: list[float] = Field(default_factory=list)
+    waveform_times: list[float] = Field(default_factory=list)
 
 
 class FaceHeatmap(StrictModel):
     t: float
     bbox: list[float] = Field(min_length=4, max_length=4)
-    width: Literal[18] = 18
-    height: Literal[18] = 18
-    values: list[int] = Field(min_length=324, max_length=324)
+    pulse: float = Field(default=0.5, ge=0, le=1)
+    width: Literal[36] = 36
+    height: Literal[36] = 36
+    values: list[int] = Field(min_length=1296, max_length=1296)
 
 
 class Intervention(StrictModel):

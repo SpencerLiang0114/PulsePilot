@@ -6,7 +6,6 @@ import time
 from collections import deque
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 from .schemas import CameraMetrics, FaceHeatmap, Sample
@@ -36,6 +35,11 @@ class FacePhysEstimator:
         self.gate = ReliabilityGate()
         self.processing_ms = 0.0
         self.frame_size = (0, 0)
+        self.heatmap_range = None
+        self.heatmap_timestamp = None
+        self.heatmap_pulses = deque(maxlen=60)
+        self.heatmap_pulse_range = (0.0, 1.0)
+        self.heatmap_pulse = 0.5
 
     def start(self):
         if self.model is not None:
@@ -60,6 +64,7 @@ class FacePhysEstimator:
             raise
 
     def close(self):
+        self.reset_heatmap()
         if self.model is not None:
             model, self.model = self.model, None
             try:
@@ -111,32 +116,59 @@ class FacePhysEstimator:
             raise RuntimeError("The FacePhys inference worker stopped. Restart measurement.")
         self.processing_ms = (time.perf_counter()-began)*1000
 
+    def reset_heatmap(self):
+        self.heatmap_range = None
+        self.heatmap_timestamp = None
+        self.heatmap_pulses.clear()
+        self.heatmap_pulse_range = (0.0, 1.0)
+        self.heatmap_pulse = 0.5
+
     def heatmap(self) -> FaceHeatmap | None:
         model = self.model
         if (model is None or self.last_timestamp is None or self.visible_since is None
                 or not self.camera.face_visible or self.camera.face_count != 1
                 or self.camera.confidence < 0.8 or model.box is None):
+            self.reset_heatmap()
             return None
         count = min(model.n_signal, len(model.ts))
         if not count:
+            self.reset_heatmap()
             return None
         timestamp = model.ts[count-1]
         if self.last_timestamp-timestamp > 0.2 or timestamp-self.visible_since < 0.5:
+            self.reset_heatmap()
             return None
-        # Pinned FacePhys: first block, second layer's temporal feature variance.
-        # JAX states are immutable; keep one reference while the worker replaces it.
+        # FacePhys demo proj.tflite fm1: state_in_8 -> reshape -> mean(channels).
         state = model.state
         variance = np.asarray(state[0][1]["tn"]["x2mean"])[0, 0]
         if variance.shape != (36, 36, 32) or not np.isfinite(variance).all():
+            self.reset_heatmap()
             return None
-        activity = np.sqrt(np.maximum(variance.mean(axis=-1), 0))
-        activity = cv2.resize(activity, (18, 18), interpolation=cv2.INTER_AREA)
-        low, high = np.percentile(activity, [5, 95])
+        attention = variance.mean(axis=-1)
+        low, high = float(attention.min()), float(attention.max())
         if high-low < 1e-6:
+            self.reset_heatmap()
             return None
-        values = np.rint(np.clip((activity-low)/(high-low), 0, 1)*255).astype(np.uint8)
+        if timestamp != self.heatmap_timestamp:
+            if self.heatmap_range is None:
+                self.heatmap_range = (low, high)
+            else:
+                old_low, old_high = self.heatmap_range
+                self.heatmap_range = (.95*old_low + .05*low, .95*old_high + .05*high)
+            bvp = getattr(model, "signal_buff", {}).get("bvp", [])
+            pulse = finite(bvp[count-1]) if len(bvp) >= count else None
+            if pulse is not None:
+                self.heatmap_pulses.append(pulse)
+                if len(self.heatmap_pulses) >= 10:
+                    lo, hi = self.heatmap_pulse_range
+                    lo = .9*lo + .1*min(self.heatmap_pulses)
+                    hi = .9*hi + .1*max(self.heatmap_pulses)
+                    self.heatmap_pulse_range = (lo, hi)
+                    self.heatmap_pulse = float(np.clip((pulse-lo)/(hi-lo), 0, 1)) if hi-lo >= .01 else .5
+            self.heatmap_timestamp = timestamp
+        low, high = self.heatmap_range
+        values = np.rint(np.clip((attention-low)/(high-low), 0, 1)*255).astype(np.uint8)
         h, w = self.frame_size
-        # Upstream crops with box in [[top, bottom], [left, right]] order.
         box = np.asarray(model.box, dtype=float).copy()
         x1, x2 = np.clip(box[1], 0, w)/w
         y1, y2 = np.clip(box[0], 0, h)/h
@@ -144,7 +176,7 @@ class FacePhysEstimator:
             return None
         return FaceHeatmap(t=round(timestamp-self.start_time, 3),
                            bbox=[float(x1), float(y1), float(x2), float(y2)],
-                           values=values.reshape(-1).tolist())
+                           values=values.reshape(-1).tolist(), pulse=self.heatmap_pulse)
 
     def snapshot(self) -> Sample:
         model = self.model
@@ -155,7 +187,7 @@ class FacePhysEstimator:
         fresh = self.last_timestamp-max(self.epoch, visible_start)
         stamps = np.asarray(self.timestamps)
         fps = float((len(stamps)-1)/(stamps[-1]-stamps[0])) if len(stamps) > 1 else 0
-        candidate, sqi, wave = None, None, []
+        candidate, sqi, wave, wave_times = None, None, [], []
         # Only read samples the upstream worker has completed; queries stay on its timeline.
         count = min(model.n_signal, len(model.signal_buff.get("bvp", [])), len(model.ts))
         if count >= 300:
@@ -167,12 +199,15 @@ class FacePhysEstimator:
                 sqi = max(0, min(1, sqi)) if sqi is not None else None
         if count >= 60:
             end = model.ts[count-1]-model.ts[0]
-            values, _ = model.bvp(start=max(0, end-8), end=end)
-            wave = [float(x) for x in values[-240:] if math.isfinite(float(x))]
+            values, times = model.bvp(start=max(0, end-8), end=end)
+            for value, timestamp in zip(values[-240:], times[-240:], strict=True):
+                if math.isfinite(float(value)) and math.isfinite(float(timestamp)):
+                    wave.append(float(value))
+                    wave_times.append(float(timestamp + model.ts[0] - self.start_time))
         lag = max(0, self.last_timestamp-model.ts[count-1]) if count else 0
         sample = Sample(t=round(elapsed, 3), sqi=sqi, fps=round(fps, 1),
                         latency_ms=round(self.processing_ms + lag*1000, 1),
-                        camera=self.camera.model_copy(deep=True), waveform=wave)
+                        camera=self.camera.model_copy(deep=True), waveform=wave, waveform_times=wave_times)
         if lag > 0.5:
             fresh = 0
         return self.gate.apply(sample, candidate, fresh)

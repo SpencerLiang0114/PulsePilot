@@ -18,5 +18,6 @@ def simulated_sample(t: float, gate: ReliabilityGate) -> Sample:
     bpm = 72 + 1.8*math.sin(t/13)
     wave = [math.sin(2*math.pi*(bpm/60)*(t-8+i/30)) + 0.22*math.sin(4*math.pi*(bpm/60)*(t-8+i/30))
             for i in range(240)] if t > 2 else []
-    sample = Sample(t=t, sqi=quality, fps=30, latency_ms=18, camera=camera, waveform=wave)
+    sample = Sample(t=t, sqi=quality, fps=30, latency_ms=18, camera=camera, waveform=wave,
+                    waveform_times=[t-8+i/30 for i in range(len(wave))])
     return gate.apply(sample, bpm, t)

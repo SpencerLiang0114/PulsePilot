@@ -1,6 +1,6 @@
 export type Mode = "camera" | "recording" | "simulation";
 export type FaceHeatmap = {
-  t: number; bbox: number[]; width: number; height: number; values: number[];
+  t: number; bbox: number[]; width: number; height: number; values: number[]; pulse?: number;
 };
 export type CameraMetrics = {
   face_visible: boolean; face_count: number; confidence: number; center_offset: number;
@@ -10,7 +10,7 @@ export type CameraMetrics = {
 };
 export type Sample = {
   t: number; bpm: number | null; sqi: number | null; usable: boolean; state: string;
-  fps: number; latency_ms: number; camera: CameraMetrics; waveform: number[];
+  fps: number; latency_ms: number; camera: CameraMetrics; waveform: number[]; waveform_times?: number[];
 };
 export type Intervention = {
   id: string; issue: string; action: string; started_at: number; evaluated_at: number | null;

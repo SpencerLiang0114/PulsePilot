@@ -3,7 +3,7 @@ import type { Sample } from "../lib/types";
 
 const accepted: Sample = {
   t: 0, bpm: 72, sqi: 0.9, usable: true, state: "Signal stable", fps: 30, latency_ms: 10,
-  waveform: [0, 1, 0, -1],
+  waveform: [0, 1, 0, -1], waveform_times: [0, 1/30, 2/30, 3/30],
   camera: {
     face_visible: true, face_count: 1, confidence: 1, center_offset: 0, face_size: 0.4,
     yaw_proxy: 0, roll_degrees: 0, brightness: 120, light_imbalance: 0, light_change: 0,
@@ -48,6 +48,7 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   let faceVisible = true;
   let sendHeatmap = true;
   let freezeHeatmap = false;
+  let heatmapPulse = 0;
   let heatmapTimestamp = 0;
   await page.routeWebSocket("**/ws/measure", socket => {
     let t = 0;
@@ -60,8 +61,8 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
       socket.send(JSON.stringify({ type: "ack" }));
       if (!freezeHeatmap) heatmapTimestamp = t;
       if (sendHeatmap) socket.send(JSON.stringify({ type: "face_heatmap", heatmap: faceVisible ? {
-        t: heatmapTimestamp, bbox: [.2, .2, .65, .7], width: 18, height: 18,
-        values: Array.from({ length: 324 }, (_, i) => Math.round(i / 323 * 255)),
+        t: heatmapTimestamp, pulse: heatmapPulse, bbox: [.2, .2, .65, .7], width: 36, height: 36,
+        values: Array.from({ length: 1296 }, (_, i) => Math.round(i / 1295 * 255)),
       } : null }));
       socket.send(JSON.stringify({ type: "sample", interventions: [], sample: {
         ...accepted, t, bpm: faceVisible ? 72 : null, usable: faceVisible,
@@ -76,7 +77,7 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   await expect(video).toHaveCSS("opacity", "1");
   await expect.poll(() => video.evaluate((el: HTMLVideoElement) => !el.paused && el.videoWidth > 0)).toBe(true);
   await expect(page.getByRole("img", { name: "Detected face", exact: true })).toBeVisible();
-  const heatmap = page.getByRole("img", { name: "Face temporal feature activity heatmap" });
+  const heatmap = page.getByRole("img", { name: "FacePhys attention heatmap" });
   const toggle = page.getByRole("switch", { name: "Face heatmap" });
   await expect(heatmap).toBeVisible();
   const checkAlignment = async () => {
@@ -96,8 +97,16 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   };
   await checkAlignment();
   await expect(heatmap).toHaveClass(/mirrored/);
+  await expect(page.getByRole("img", { name: "Detected face", exact: true }).locator("rect")).toHaveAttribute("x", "64");
   await expect.poll(() => heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement) =>
-    canvas.getContext("2d")!.getImageData(0, 0, 1, 1).data[3])).toBeGreaterThan(0);
+    canvas.getContext("2d")!.getImageData(18, 18, 1, 1).data[3])).toBeGreaterThan(0);
+  await expect(heatmap).toHaveCSS("mix-blend-mode", "screen");
+  const pixel = (x: number, y: number) => heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement, [px, py]) =>
+    Array.from(canvas.getContext("2d")!.getImageData(px, py, 1, 1).data), [x, y]);
+  expect(await pixel(0, 0)).toEqual([0, 0, 0, 0]);
+  expect(await pixel(35, 35)).toEqual([255, 210, 45, 255]);
+  heatmapPulse = 1;
+  await expect.poll(async () => (await pixel(35, 35))[1]).toBe(255);
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-checked", "false");
   await expect(heatmap).toHaveCount(0);
@@ -221,7 +230,7 @@ test("tracking and heatmap position update between measurement and model samples
       const bbox = advance ? [.4, .2, .8, .7] : [.2, .2, .6, .7];
       socket.send(JSON.stringify({ type: "face_heatmap", t,
         camera: { ...accepted.camera, bbox },
-        heatmap: { t: 0, bbox, width: 18, height: 18, values: Array(324).fill(128) },
+        heatmap: { t: 0, bbox, width: 36, height: 36, values: Array(1296).fill(128) },
       }));
     });
   });
@@ -229,10 +238,55 @@ test("tracking and heatmap position update between measurement and model samples
   await start(page);
   expect(await page.evaluate(() => (window as unknown as CameraWindow).cameraConstraints.video)).toMatchObject({ frameRate: { ideal: 60, max: 60 } });
   const rect = page.getByRole("img", { name: "Detected face", exact: true }).locator("rect");
-  const map = page.getByRole("img", { name: "Face temporal feature activity heatmap" }).locator("foreignObject");
+  const map = page.getByRole("img", { name: "FacePhys attention heatmap" }).locator("foreignObject");
   await expect(rect).toHaveAttribute("x", "64");
   advance = true;
   await expect(rect).toHaveAttribute("x", "128");
   await expect(map).toHaveAttribute("x", "128");
   await expect(page.locator(".heart-value")).toHaveText("72BPM");
+});
+
+test("waveform uses signal times, scrolls between updates, and shows readable scales", async ({ page }) => {
+  await camera(page);
+  let nextTime = 12;
+  let sentTime = -1;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        if (JSON.parse(message).type === "start") socket.send(JSON.stringify({ type: "ready", ai_status: "not_requested" }));
+        return;
+      }
+      socket.send(JSON.stringify({ type: "ack" }));
+      if (sentTime === nextTime) return;
+      sentTime = nextTime;
+      socket.send(JSON.stringify({ type: "sample", interventions: [], sample: {
+        ...accepted, t: nextTime,
+        waveform: Array.from({ length: 240 }, (_, i) => Math.sin(i / 30 * 2 * Math.PI * 1.2)),
+        waveform_times: Array.from({ length: 240 }, (_, i) => nextTime - 8 + i / 30),
+      } }));
+    });
+  });
+  await page.goto("/");
+  await start(page);
+  const chart = page.locator(".camera-signal .pulse-waveform");
+  const trace = chart.locator(".wave-trace");
+  await expect(chart).toContainText("BVP · normalized");
+  await expect(chart).toContainText("2.0");
+  await expect(chart).toContainText("12s");
+  const initial = await trace.getAttribute("d");
+  await expect.poll(() => trace.getAttribute("d")).not.toBe(initial);
+  const pointCount = (initial?.match(/[ML]/g) ?? []).length;
+  expect(pointCount).toBe(240);
+  const box = await chart.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 50);
+  await expect(chart.locator(".chart-tooltip")).toContainText("normalized BVP");
+  nextTime = 15;
+  await expect.poll(async () => Number(await chart.getAttribute("data-window-start"))).toBeGreaterThanOrEqual(7);
+  await expect(chart).toContainText("15s");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const readingBox = await page.locator(".camera-reading").boundingBox();
+  const signalBox = await page.locator(".camera-signal").boundingBox();
+  expect(signalBox!.y).toBeGreaterThan(readingBox!.y + readingBox!.height);
+  await page.screenshot({ path: "test-results/scrolling-waveform-mobile.png", fullPage: true });
 });

@@ -82,13 +82,14 @@ def heatmap_estimator():
     return estimator
 
 
-def test_heatmap_uses_spatial_model_variance_and_the_actual_crop(heatmap_estimator):
+def test_heatmap_matches_demo_fm1_projection_and_actual_crop(heatmap_estimator):
     heatmap = heatmap_estimator.heatmap()
     assert heatmap.t == .9
     assert heatmap.bbox == [80/320, 40/240, 240/320, 200/240]
-    assert heatmap.width == heatmap.height == 18 and len(heatmap.values) == 324
+    assert heatmap.width == heatmap.height == 36 and len(heatmap.values) == 1296
     assert min(heatmap.values) == 0 and max(heatmap.values) == 255
-    assert heatmap.values[0] < heatmap.values[-1]
+    assert heatmap.values[324] == round(324/1295*255)
+    assert heatmap.pulse == .5
 
 
 @pytest.mark.parametrize("condition", ["lost", "multiple", "low_confidence", "lag", "warmup", "empty", "flat", "nan"])
@@ -109,3 +110,45 @@ def test_heatmap_hides_unusable_or_uninitialized_features(heatmap_estimator, con
     else:
         estimator.model.state[0][1]["tn"]["x2mean"] = np.full((1, 1, 36, 36, 32), np.nan if condition == "nan" else 1)
     assert estimator.heatmap() is None
+
+
+def test_heatmap_smooths_range_once_per_model_frame(heatmap_estimator):
+    estimator = heatmap_estimator
+    estimator.heatmap()
+    variance = estimator.model.state[0][1]["tn"]["x2mean"]
+    estimator.model.state[0][1]["tn"]["x2mean"] = variance*2
+    estimator.model.ts = [11]
+    first = estimator.heatmap()
+    assert estimator.heatmap_range == pytest.approx((0, 1295*1.05))
+    second = estimator.heatmap()
+    assert first.values == second.values
+    assert estimator.heatmap_range == pytest.approx((0, 1295*1.05))
+    estimator.camera.face_visible = False
+    assert estimator.heatmap() is None
+    assert estimator.heatmap_range is None
+
+
+def test_heatmap_brightness_tracks_completed_bvp_only(heatmap_estimator):
+    estimator = heatmap_estimator
+    estimator.model.signal_buff = {"bvp": []}
+    for i in range(10):
+        timestamp = 10.9+i/30
+        estimator.last_timestamp = timestamp
+        estimator.model.ts = [timestamp]
+        estimator.model.signal_buff["bvp"] = [i/10]
+        heatmap = estimator.heatmap()
+    assert heatmap.pulse > .5
+    estimator.heatmap()
+    assert len(estimator.heatmap_pulses) == 10
+
+
+def test_waveform_timestamps_preserve_session_offset_and_missing_values():
+    estimator = FacePhysEstimator()
+    estimator.start_time, estimator.epoch, estimator.last_timestamp = 10, 14, 16.1
+    estimator.model = SimpleNamespace(
+        n_signal=60, ts=np.linspace(14, 16, 60).tolist(), signal_buff={"bvp": [0]*60},
+        bvp=lambda **kwargs: ([1, np.nan, -1], np.array([1.9, 1.95, 2.0])),
+    )
+    sample = estimator.snapshot()
+    assert sample.waveform == [1, -1]
+    assert sample.waveform_times == pytest.approx([5.9, 6.0])

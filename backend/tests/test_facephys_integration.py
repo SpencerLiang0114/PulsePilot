@@ -40,7 +40,7 @@ def test_heatmap_reads_real_checkpoint_temporal_state():
         extractor.camera = CameraMetrics(face_visible=True, face_count=1, confidence=.99)
         heatmap = extractor.heatmap()
         assert heatmap is not None and len(set(heatmap.values)) > 10
-        assert len(heatmap.values) == 324
+        assert len(heatmap.values) == 1296
     finally:
         estimator.close()
 
@@ -75,7 +75,7 @@ def test_real_checkpoint_stream_finish_and_fresh_recording_session():
                 assert message["type"] == "report", message
                 report = message["report"]
                 assert report["mode"] == mode
-                assert report["samples"] == [dict(sample, waveform=[]) for sample in samples]
+                assert report["samples"] == [dict(sample, waveform=[], waveform_times=[]) for sample in samples]
                 assert samples[0]["t"] == 0
                 assert all(sample["bpm"] is None and not sample["usable"] for sample in samples)
                 assert all(not sample["camera"]["face_visible"] for sample in samples)

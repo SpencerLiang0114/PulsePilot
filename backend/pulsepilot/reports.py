@@ -106,7 +106,7 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         "limits", "limitation")]
     return Report(
         id=str(uuid4()), created_at=datetime.now(UTC).isoformat(), mode=config.mode, stats=stats,
-        samples=[s.model_copy(update={"waveform": []}) for s in samples],
+        samples=[s.model_copy(update={"waveform": [], "waveform_times": []}) for s in samples],
         interventions=[i.model_copy(deep=True) for i in interventions], evidence=evidence,
         analysis=Analysis(summary=summary, quality=quality_sections,
                           interventions=intervention_sections, recommendations=recommendations),

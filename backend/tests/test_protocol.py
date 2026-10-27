@@ -224,7 +224,7 @@ def test_heatmap_stream_is_transient_and_absent_from_reports(monkeypatch, estima
     import pulsepilot.app as module
     from pulsepilot.schemas import FaceHeatmap
 
-    heatmap = FaceHeatmap(t=0, bbox=[.2, .1, .8, .9], values=[128]*324)
+    heatmap = FaceHeatmap(t=0, bbox=[.2, .1, .8, .9], values=[128]*1296)
     monkeypatch.setattr(module.FacePhysEstimator, "heatmap", lambda self: heatmap)
     with TestClient(app) as client, client.websocket_connect(
         "/ws/measure", headers={"origin": "http://localhost:3000"}
