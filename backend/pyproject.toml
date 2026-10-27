@@ -18,6 +18,7 @@ dependencies = [
   "einops>=0.8,<1",
   "av>=13,<17",
   "setuptools<81",
+  "langgraph>=1.0,<2",
 ]
 
 [dependency-groups]
