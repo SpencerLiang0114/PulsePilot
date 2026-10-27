@@ -34,7 +34,7 @@ test("late AI interpretation updates history without navigating away", async ({ 
   await expect(page.getByRole("heading", { name: "Find your steady signal." })).toBeVisible();
   await page.getByRole("button", { name: /Session reports/ }).click();
   await page.getByRole("heading", { name: "Simulated measurement" }).click();
-  await expect(page.getByText("Interpreted by Muse Spark from this session’s evidence")).toBeVisible();
+  await expect(page.getByText("Selected by Muse Spark from server-validated session evidence")).toBeVisible();
 });
 
 test("starting over marks an unfinished AI interpretation as stopped", async ({ page }) => {

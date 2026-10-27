@@ -45,7 +45,7 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
       </section>
     </div>
     <div className="analysis-heading"><div className="coach-symbol">✳</div><div><h2>Measurement analysis</h2><p>
-      {report.analyst === "muse" ? "Interpreted by Muse Spark from this session’s evidence" :
+      {report.analyst === "muse" ? "Selected by Muse Spark from server-validated session evidence" :
         report.ai_status === "pending" ? "Numerical report ready. Muse Spark is preparing its interpretation…" :
         report.ai_status === "unavailable" ? "Muse Spark was unavailable. Showing evidence-based deterministic analysis." :
         report.ai_status === "cancelled" ? "AI interpretation was stopped. Showing evidence-based deterministic analysis." :

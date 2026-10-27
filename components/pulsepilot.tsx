@@ -51,12 +51,12 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
     </div>
     <label className="field-label" htmlFor="coaching-mode">Measurement coaching</label>
     <select id="coaching-mode" value={coaching} onChange={e => setCoaching(e.target.value as CoachingMode)}>
-      <option value="meta">Muse Spark · adapts with your consent</option>
+      <option value="meta">Muse Spark · validated guidance with your consent</option>
       <option value="rules">Rules · deterministic guidance</option>
       <option value="passive">Passive · observe without instructions</option>
     </select>
     {mode !== "simulation" && <label className="check-label"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to send video frames to the inference service for this measurement.<small>Frames are processed in memory and discarded. Audio is never captured. Reports stay in this page until exported.</small></span></label>}
-    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark select guidance and interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images. Without consent, Muse mode uses rules." : "Available when a Meta API key is configured. Deterministic guidance and reports work now."}</small></span></label>
+    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark assist with guidance and interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images. Without consent, Muse mode uses rules." : "Available when a Meta API key is configured and agents are enabled. Deterministic guidance and reports work now."}</small></span></label>
     <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent, coaching)}>
       {mode === "simulation" ? <Play size={17} /> : <Camera size={18} />}{mode === "simulation" ? "Start simulated session" : mode === "recording" ? "Process recording" : "Enable camera & start"}
     </button>
@@ -225,7 +225,7 @@ export function PulsePilot() {
         </div>}
       </main>
     </div>
-    {setup && <ConsentDialog mode={setup} aiAvailable={!!m.health?.ai_configured} fileName={setup === "recording" ? file?.name : undefined}
+    {setup && <ConsentDialog mode={setup} aiAvailable={!!m.health?.ai_configured && m.health.agent_mode !== "off"} fileName={setup === "recording" ? file?.name : undefined}
       onClose={() => setSetup(null)} onStart={(duration, aiConsent, coaching) => {
         const mode = setup; setSetup(null);
         void m.start({ mode, duration, aiConsent, coaching, frameConsent: mode !== "simulation", file });

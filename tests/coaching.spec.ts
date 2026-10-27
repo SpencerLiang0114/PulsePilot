@@ -82,3 +82,32 @@ test("live decisions wait for commitment and report timeline preserves provenanc
   await expect(page.getByText(intervention.action, { exact: true })).toHaveCount(0);
   await expect(page.getByText("Muse Spark decision", { exact: true })).toHaveCount(0);
 });
+
+test("assisted explanations preserve the committed rules action and provenance", async ({ page }) => {
+  let send: ((value: object) => void) | undefined;
+  await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: true, agent_mode: "assist" } }));
+  await page.routeWebSocket("**/ws/measure", socket => {
+    send = value => socket.send(JSON.stringify(value));
+    socket.onMessage(message => {
+      if (typeof message === "string" && JSON.parse(message).type === "start") {
+        send!({ type: "ready", ai_status: "ready", agent_mode: "assist" });
+        send!({ type: "sample", sample, interventions: [{ ...intervention, decision_source: "rules", source: "rules", explanation_source: "rules" }], coaching_state: "ACTING" });
+      }
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore the demo" }).click();
+  await page.getByLabel("Let Muse Spark").check();
+  await page.getByRole("button", { name: "Start simulated session" }).click();
+  await expect(page.getByText(intervention.action, { exact: true })).toBeVisible();
+  send!({ type: "sample", sample: { ...sample, t: 5.5 }, interventions: [{ ...intervention, decision_source: "rules", source: "rules" }], coaching_state: "ACTING" });
+  await expect(page.getByText("Rules decision · Muse Spark explanation", { exact: true })).toBeVisible();
+  await expect(page.getByText(intervention.action, { exact: true })).toBeVisible();
+});
+
+test("disabled orchestration keeps the AI consent control unavailable", async ({ page }) => {
+  await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: true, agent_mode: "off" } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore the demo" }).click();
+  await expect(page.getByLabel("Let Muse Spark")).toBeDisabled();
+});

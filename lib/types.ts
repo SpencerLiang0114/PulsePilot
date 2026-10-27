@@ -1,5 +1,6 @@
 export type Mode = "camera" | "recording" | "simulation";
 export type CoachingMode = "passive" | "rules" | "meta";
+export type AgentMode = "off" | "observe" | "assist" | "adaptive";
 export type CoachingState = "MONITORING" | "DECIDING" | "ACTING" | "OBSERVING" | "COOLDOWN";
 export type FaceHeatmap = {
   t: number; bbox: number[]; width: number; height: number; values: number[]; pulse?: number;
@@ -23,11 +24,13 @@ export type Intervention = {
   action_id: string; decision_source: "rules" | "muse"; explanation_source: "rules" | "muse";
   decision_status: string; before_camera: Record<string, number>; after_camera: Record<string, number>;
   environmental_changes: Record<string, number>;
+  agent_event_id?: string | null; graph_version?: string | null;
+  model_latency_ms?: number | null; graph_latency_ms?: number | null;
 };
 export type Statement = { kind: "fact" | "possible explanation" | "limitation"; text: string; evidence_ids: string[] };
 export type Analysis = { summary: Statement[]; quality: Statement[]; interventions: Statement[]; recommendations: Statement[] };
 export type GroundedClaim = {
-  claim_id: string; section: keyof Analysis; kind: "measurement" | "quality" | "outcome" | "limitation";
+  claim_id: string; claim_type: string; section: keyof Analysis; kind: "measurement" | "quality" | "outcome" | "limitation";
   statement_kind: Statement["kind"]; evidence_id: string; metric: string; value: number | string | null; text: string;
 };
 export type Report = {
@@ -39,8 +42,9 @@ export type Report = {
     mean_latency_ms: number; lighting_issue_fraction: number; motion_issue_fraction: number; alignment_issue_fraction: number;
   };
   samples: Sample[]; interventions: Intervention[]; evidence: Record<string, string>; analysis: Analysis; claims: GroundedClaim[];
+  agent_event_id?: string | null; graph_version?: string | null;
 };
-export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean };
+export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean; agent_mode?: AgentMode };
 
 export function backendUrl() {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -53,5 +57,7 @@ export function backendUrl() {
 export const percent = (n: number | null | undefined) => n == null ? "—" : `${Math.round(n * 100)}%`;
 export const clockText = (n: number) => `${Math.floor(n / 60)}:${Math.floor(n % 60).toString().padStart(2, "0")}`;
 export const decisionLabel = (item: Intervention) => item.decision_source === "muse" ? "Muse Spark decision"
+  : item.explanation_source === "muse" ? "Rules decision · Muse Spark explanation"
+  : item.decision_status.startsWith("explanation_fallback_") ? "Rules decision · Muse explanation unavailable"
   : item.decision_status.startsWith("fallback_") ? `Rules fallback · ${item.decision_status.slice(9).replaceAll("_", " ")}`
   : item.decision_status === "safety" ? "Deterministic safety instruction" : "Rules decision";
