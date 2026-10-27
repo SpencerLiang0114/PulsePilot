@@ -185,6 +185,7 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .setup-dialog h2 { font-size:25px; }
 .setup-dialog > p { font-size:12px; margin-top:9px; }
 .field-label { display:block; margin-top:23px; font-size:11px; font-weight:700; }
+.setup-dialog select { width:100%; margin-top:9px; padding:10px; border:1px solid var(--line); border-radius:8px; background:white; color:var(--ink); font-size:12px; }
 .duration-options { display:flex; gap:8px; margin-top:10px; }
 .duration-options > button { flex:1; background:#fafcfc; border:1px solid var(--line); border-radius:8px; padding:12px 3px; color:#667c88; font-size:11px; }
 .duration-options > button.selected { border-color:#5aa39d; background:#edf8f3; color:#236f65; }

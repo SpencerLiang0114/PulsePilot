@@ -5,7 +5,7 @@ function pendingReport(): Report {
   const statement = { kind: "limitation" as const, text: "No usable signal in this synthetic test.", evidence_ids: ["limits"] };
   return {
     id: "pending-ai-test", created_at: "2026-10-20T12:00:00Z", mode: "simulation",
-    analyst: "deterministic", ai_status: "pending", samples: [], interventions: [],
+    analyst: "deterministic", ai_status: "pending", samples: [], interventions: [], claims: [],
     evidence: { limits: "Synthetic test of asynchronous report lifecycle." },
     analysis: { summary: [statement], quality: [statement], interventions: [statement], recommendations: [statement] },
     stats: {

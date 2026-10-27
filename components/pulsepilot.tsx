@@ -7,7 +7,7 @@ import {
   Play, Plus, RotateCcw, ShieldCheck, Sparkles, Square, Sun, Upload, Waves, X,
 } from "lucide-react";
 import { useMeasurement } from "@/lib/use-measurement";
-import { clockText, Mode, percent, Report } from "@/lib/types";
+import { clockText, CoachingMode, decisionLabel, Mode, percent, Report } from "@/lib/types";
 import { PulseWaveform } from "./pulse-waveform";
 import { ReportView } from "./report";
 import { FaceHeatmap } from "./face-heatmap";
@@ -29,13 +29,14 @@ function FaceGuide({ active }: { active: boolean }) {
 }
 
 function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
-  mode: Mode; onClose: () => void; onStart: (duration: number, aiConsent: boolean) => void;
+  mode: Mode; onClose: () => void; onStart: (duration: number, aiConsent: boolean, coaching: CoachingMode) => void;
   aiAvailable: boolean; fileName?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [duration, setDuration] = useState(60);
   const [consent, setConsent] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
+  const [coaching, setCoaching] = useState<CoachingMode>("meta");
   useEffect(() => { dialogRef.current?.showModal(); }, []);
   return <dialog ref={dialogRef} className="setup-dialog" onCancel={onClose}>
     <button className="close-button" aria-label="Close setup" onClick={onClose}><X size={20} /></button>
@@ -48,9 +49,15 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
     <div className="duration-options" id="duration" role="group" aria-label="Measurement length">
       {[30, 60, 90].map(n => <button key={n} className={duration === n ? "selected" : ""} onClick={() => setDuration(n)}>{n} seconds{n === 60 && <span>Recommended</span>}</button>)}
     </div>
+    <label className="field-label" htmlFor="coaching-mode">Measurement coaching</label>
+    <select id="coaching-mode" value={coaching} onChange={e => setCoaching(e.target.value as CoachingMode)}>
+      <option value="meta">Muse Spark · adapts with your consent</option>
+      <option value="rules">Rules · deterministic guidance</option>
+      <option value="passive">Passive · observe without instructions</option>
+    </select>
     {mode !== "simulation" && <label className="check-label"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to send video frames to the inference service for this measurement.<small>Frames are processed in memory and discarded. Audio is never captured. Reports stay in this page until exported.</small></span></label>}
-    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images." : "Available when a Meta API key is configured. Deterministic guidance and reports work now."}</small></span></label>
-    <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent)}>
+    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark select guidance and interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images. Without consent, Muse mode uses rules." : "Available when a Meta API key is configured. Deterministic guidance and reports work now."}</small></span></label>
+    <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent, coaching)}>
       {mode === "simulation" ? <Play size={17} /> : <Camera size={18} />}{mode === "simulation" ? "Start simulated session" : mode === "recording" ? "Process recording" : "Enable camera & start"}
     </button>
     <p className="dialog-footnote">For research and personal observation. Not a medical device.</p>
@@ -81,8 +88,8 @@ export function PulsePilot() {
   const current = measuring ? m.sample : null;
   const camera = measuring ? m.camera ?? current?.camera : null;
   const faceBox = showHeatmap && m.heatmap ? m.heatmap.bbox : camera?.bbox;
-  const active = m.interventions.find(i => i.outcome === "observing");
-  const lastIntervention = m.interventions.at(-1);
+  const active = measuring ? m.interventions.find(i => i.outcome === "observing") : undefined;
+  const lastIntervention = measuring ? m.interventions.at(-1) : undefined;
   const selected = reports.find(r => r.id === selectedReport);
   const startSetup = (mode: Mode) => { void m.refreshHealth(); setSetup(mode); };
   const go = (next: typeof view) => { if (busy) return; setView(next); if (next === "reports") setSelectedReport(null); };
@@ -97,7 +104,7 @@ export function PulsePilot() {
     { title: "Head movement", icon: Waves, value: !current || !current.camera.face_visible ? "Waiting" : current.camera.motion > .28 ? "Hold steady" : "Steady",
       good: current && current.camera.face_visible && current.camera.motion <= .28 },
   ];
-  const guideMessage = m.status === "connecting" ? m.message : active?.action ??
+  const guideMessage = m.status === "connecting" ? m.message : m.coachingState === "DECIDING" && measuring ? "Choosing a useful adjustment…" : active?.action ??
     (current?.usable ? "Your signal is settling in. Keep this comfortable position." :
       measuring ? "Face the camera and hold still while we find your pulse signal." :
         "Good measurements start with a comfortable setup.");
@@ -184,10 +191,11 @@ export function PulsePilot() {
                 <div className={`measurement-state ${current?.usable ? "good" : ""}`}><span />{current?.state ?? (m.status === "connecting" ? "Initializing" : "Not measuring")}</div>
                 <div className="quality-meter"><div><span>Signal quality</span><strong>{percent(current?.sqi)}</strong></div><div className="meter-track"><span style={{ width: `${(current?.sqi ?? 0) * 100}%` }} /></div><p>{current?.sqi != null ? "Signal periodicity, not an accuracy score." : "We’ll show a number when there’s enough usable signal."}</p></div>
               </section>
-              <section className="coach-panel"><div className="section-heading"><h3><span className="coach-symbol">✳</span>Your measurement coach</h3><span className="live-label">{active?.source === "muse" ? "Muse Spark" : "Guided"}</span></div>
+              <section className="coach-panel"><div className="section-heading"><h3><span className="coach-symbol">✳</span>Your measurement coach</h3><span className="live-label">{measuring ? m.coachingMode === "passive" ? "Passive" : m.coachingState.toLowerCase() : "Ready"}</span></div>
                 <h2 aria-live="polite">{guideMessage}</h2>
+                {active && <small>{decisionLabel(active)}</small>}
                 <p>{active?.explanation ?? (active ? "We’ll compare the signal before and after this adjustment." : "Sit at ease. Keep the light in front of you. We’ll help with the rest.")}</p>
-                {active ? <div className="intervention-status"><LoaderCircle size={14} className="spin" /><span>Observing the effect of your adjustment</span></div> :
+                {active ? <div className="intervention-status"><LoaderCircle size={14} className="spin" /><span>{m.coachingState === "ACTING" ? "Time to make your adjustment" : "Comparing measurement conditions after your adjustment"}</span></div> :
                   lastIntervention ? <div className="intervention-status"><Check size={15} /><span>{lastIntervention.outcome === "improved" ? `Periodicity improved by ${Math.round((lastIntervention.delta ?? 0) * 100)} points` : `Last adjustment: ${lastIntervention.outcome}`}</span></div> :
                     <div className="coach-footnote"><ShieldCheck size={14} />One useful adjustment at a time</div>}
               </section>
@@ -218,9 +226,9 @@ export function PulsePilot() {
       </main>
     </div>
     {setup && <ConsentDialog mode={setup} aiAvailable={!!m.health?.ai_configured} fileName={setup === "recording" ? file?.name : undefined}
-      onClose={() => setSetup(null)} onStart={(duration, aiConsent) => {
+      onClose={() => setSetup(null)} onStart={(duration, aiConsent, coaching) => {
         const mode = setup; setSetup(null);
-        void m.start({ mode, duration, aiConsent, frameConsent: mode !== "simulation", file });
+        void m.start({ mode, duration, aiConsent, coaching, frameConsent: mode !== "simulation", file });
       }} />}
   </div>;
 }

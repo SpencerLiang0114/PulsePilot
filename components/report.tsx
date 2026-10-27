@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Download, Printer, CircleCheck, FlaskConical } from "lucide-react";
 import { Chart } from "./chart";
-import { Analysis, clockText, percent, Report as ReportData } from "@/lib/types";
+import { Analysis, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
 
 export function ReportView({ report, onBack, onNew }: { report: ReportData; onBack: () => void; onNew: () => void }) {
   const { stats } = report;
@@ -60,7 +60,8 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
       </div>
     </section>)}</div>
     {report.interventions.length > 0 && <section className="panel intervention-report"><h3>Guidance & observed outcomes</h3>
-      {report.interventions.map(item => <div className="intervention-row" key={item.id}><span>{clockText(item.started_at)}</span><div><strong>{item.action}</strong><p>{item.before_sqi == null || item.after_sqi == null ? "Not enough comparable signal" : `Periodicity: ${percent(item.before_sqi)} → ${percent(item.after_sqi)}. Change: ${Math.round(item.delta! * 100)} percentage points.`}</p></div><span className={`outcome ${item.outcome}`}>{item.outcome}</span></div>)}
+      <p>Observed before/after comparisons do not establish causal benefit or heart-rate accuracy.</p>
+      {report.interventions.map(item => <div className="intervention-row" key={item.id}><span>{clockText(item.started_at)}{item.evaluated_at != null && <>–{clockText(item.evaluated_at)}</>}</span><div><strong>{item.action}</strong><p>{decisionLabel(item)}</p><p>{item.before_sqi == null || item.after_sqi == null ? "Not enough comparable signal" : `Periodicity: ${percent(item.before_sqi)} → ${percent(item.after_sqi)}. Change: ${Math.round(item.delta! * 100)} percentage points.`}</p><p>Usable windows: {percent(item.before_usable)} → {percent(item.after_usable)}</p></div><span className={`outcome ${item.outcome}`}>{item.outcome}</span></div>)}
     </section>}
     <div className="quality-detail"><span>Face tracking <strong>{percent(stats.tracking_fraction)}</strong></span><span>Mean capture rate <strong>{stats.mean_fps} fps</strong></span><span>Signal coverage <strong>{percent(stats.signal_coverage)}</strong></span></div>
     <footer className="report-footer"><p>Signal quality describes the measurement, not your health. Accuracy has not been verified against a reference device.</p><button className="primary" onClick={onNew}>Start a new measurement</button></footer>

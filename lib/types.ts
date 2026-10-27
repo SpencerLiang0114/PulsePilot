@@ -1,4 +1,6 @@
 export type Mode = "camera" | "recording" | "simulation";
+export type CoachingMode = "passive" | "rules" | "meta";
+export type CoachingState = "MONITORING" | "DECIDING" | "ACTING" | "OBSERVING" | "COOLDOWN";
 export type FaceHeatmap = {
   t: number; bbox: number[]; width: number; height: number; values: number[]; pulse?: number;
 };
@@ -18,9 +20,16 @@ export type Intervention = {
   before_usable: number | null; after_usable: number | null;
   outcome: "observing" | "improved" | "unchanged" | "worsened" | "inconclusive";
   source: "rules" | "muse"; explanation: string | null;
+  action_id: string; decision_source: "rules" | "muse"; explanation_source: "rules" | "muse";
+  decision_status: string; before_camera: Record<string, number>; after_camera: Record<string, number>;
+  environmental_changes: Record<string, number>;
 };
 export type Statement = { kind: "fact" | "possible explanation" | "limitation"; text: string; evidence_ids: string[] };
 export type Analysis = { summary: Statement[]; quality: Statement[]; interventions: Statement[]; recommendations: Statement[] };
+export type GroundedClaim = {
+  claim_id: string; section: keyof Analysis; kind: "measurement" | "quality" | "outcome" | "limitation";
+  statement_kind: Statement["kind"]; evidence_id: string; metric: string; value: number | string | null; text: string;
+};
 export type Report = {
   id: string; created_at: string; mode: Mode; analyst: "deterministic" | "muse"; ai_status: string;
   stats: {
@@ -29,7 +38,7 @@ export type Report = {
     signal_coverage: number; duration: number; stable_at: number | null; mean_fps: number;
     mean_latency_ms: number; lighting_issue_fraction: number; motion_issue_fraction: number; alignment_issue_fraction: number;
   };
-  samples: Sample[]; interventions: Intervention[]; evidence: Record<string, string>; analysis: Analysis;
+  samples: Sample[]; interventions: Intervention[]; evidence: Record<string, string>; analysis: Analysis; claims: GroundedClaim[];
 };
 export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean };
 
@@ -43,3 +52,6 @@ export function backendUrl() {
 }
 export const percent = (n: number | null | undefined) => n == null ? "—" : `${Math.round(n * 100)}%`;
 export const clockText = (n: number) => `${Math.floor(n / 60)}:${Math.floor(n % 60).toString().padStart(2, "0")}`;
+export const decisionLabel = (item: Intervention) => item.decision_source === "muse" ? "Muse Spark decision"
+  : item.decision_status.startsWith("fallback_") ? `Rules fallback · ${item.decision_status.slice(9).replaceAll("_", " ")}`
+  : item.decision_status === "safety" ? "Deterministic safety instruction" : "Rules decision";

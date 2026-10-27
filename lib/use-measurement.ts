@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { backendUrl, CameraMetrics, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
+import { backendUrl, CameraMetrics, CoachingMode, CoachingState, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
 
-type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; file?: File };
+type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; coaching: CoachingMode; file?: File };
 
 const FRESHNESS_LIMIT_MS = 5000;
 const FRESHNESS_CHECK_MS = 250;
@@ -27,6 +27,8 @@ export function useMeasurement(onReport: (report: Report) => void) {
   const [heatmap, setHeatmap] = useState<FaceHeatmap | null>(null);
   const [history, setHistory] = useState<Sample[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [coachingState, setCoachingState] = useState<CoachingState>("MONITORING");
+  const [coachingMode, setCoachingMode] = useState<CoachingMode>("meta");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [health, setHealth] = useState<Health | null>(null);
@@ -106,6 +108,8 @@ export function useMeasurement(onReport: (report: Report) => void) {
     setDuration(options.duration);
     setHistory([]);
     setInterventions([]);
+    setCoachingState("MONITORING");
+    setCoachingMode(options.coaching);
     setMessage("Connecting to the measurement service…");
     let receivedReport = false;
     let inFlight = 0;
@@ -158,7 +162,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
     }, 90000);
     socket.onopen = () => socket.send(JSON.stringify({
       type: "start", mode: options.mode, duration: options.duration,
-      ai_consent: options.aiConsent, frame_consent: options.frameConsent, coaching: "meta",
+      ai_consent: options.aiConsent, frame_consent: options.frameConsent, coaching: options.coaching,
     }));
     socket.onerror = () => fail("The measurement service is unavailable. Start the Python backend or check its connection, then retry.");
     socket.onclose = () => {
@@ -263,8 +267,13 @@ export function useMeasurement(onReport: (report: Report) => void) {
             setSample(payload.sample);
             setHistory(current => [...current, payload.sample]);
             setInterventions(payload.interventions);
+            setCoachingState(payload.coaching_state ?? "MONITORING");
             break;
-          case "coach": setInterventions(payload.interventions); break;
+          case "coach":
+            if (statusRef.current !== "measuring") break;
+            setInterventions(payload.interventions);
+            setCoachingState(payload.coaching_state ?? "MONITORING");
+            break;
           case "duration": setDuration(payload.duration); break;
           case "report":
             stopWatchdog();
@@ -286,5 +295,5 @@ export function useMeasurement(onReport: (report: Report) => void) {
   }, [cancel, finish, releaseCamera, stopWatchdog]);
 
   return { videoRef, status, mode, duration, sample, camera, heatmap, history, interventions, error, message, health,
-    aiStatus, captureSize, start, finish, extend, cancel, refreshHealth };
+    aiStatus, captureSize, coachingState, coachingMode, start, finish, extend, cancel, refreshHealth };
 }
