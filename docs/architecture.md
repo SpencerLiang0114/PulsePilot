@@ -10,9 +10,10 @@ Browser camera or user-selected recording
   → FastAPI session (one isolated FacePhys state per connection)
   → FacePhys.rlap → BVP, HR, periodicity SQI
   → camera metrics + conservative validity gate
-  → deterministic coach → observe → compare → next action
+  → persistent candidates → asynchronous Muse/rules selection → validated instruction
+  → observe → deterministic comparison → session-local outcome memory → next decision
   → live website + deterministic session statistics
-  → Muse Spark structured interpretation → validated report
+  → Muse Spark typed claim selection → validated report
 ```
 
 Next.js/React/TypeScript owns the camera, preview, charts, controls, report history, and export. Python/FastAPI owns inference, timing validation, quality metrics, intervention outcomes, and reports. Browser capture is the only webcam owner; Python never opens a camera. No database is needed: keep reports in browser memory until the page closes, with explicit JSON and print export.
@@ -38,7 +39,7 @@ The start dialog explicitly explains that frames leave the browser for the confi
 | Local Next.js + local inference, both through one HTTPS tunnel | Short hackathon demonstration | Laptop must remain awake; tunnel URL is temporary; capacity is one measurement |
 | HTTPS frontend + plain localhost backend | Local development only | Mixed-content/private-network restrictions vary; do not promise public compatibility |
 
-Persistent hosting and a live Muse request cannot be certified without account credentials. A temporary public HTTPS tunnel is available for the local demo; see the verification record. The implementation exposes unavailable services and retains deterministic measurements and reports.
+Authenticated Muse requests and a complete synthetic decision/outcome loop have been verified; see [P1 validation](p1-verification.md). Persistent hosting and human-camera validation remain external gates. The earlier temporary HTTPS tunnel is historical demonstration evidence. The implementation exposes unavailable services and retains deterministic measurements and reports.
 
 ## Repository
 

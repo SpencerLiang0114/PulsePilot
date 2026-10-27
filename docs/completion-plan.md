@@ -20,6 +20,8 @@ Checks executed during this review:
 
 The browser run intentionally disabled Meta credentials. No real-person measurement, live Muse request, reference-device accuracy, or durable public deployment was established by this review. The earlier HTTPS tunnel results in [verification.md](verification.md) are historical evidence; that URL was not revalidated here.
 
+**Subsequent P1 implementation:** [P1 validation](p1-verification.md) supersedes this review's AI-integration status. Muse now selects eligible actions asynchronously and receives measured outcomes; exact typed claims replace prose/evidence-ID checks. Authenticated synthetic loops, real timeout fallback and a validated Muse report have passed. The existing freshness tests also pass. Human-camera/reference-device evaluation and durable hosting remain separate external gates.
+
 Two additional probes reproduced gaps outside the passing suite:
 
 - **Stale live estimate:** the timeout in `lib/use-measurement.ts` runs inside the video-frame callback. With a mocked open socket and a synthetic camera that stopped producing frames, the UI still displayed `72 BPM` and `Signal stable` after 8.5 seconds. The real backend has a separate fifteen-second idle timeout, but the browser does not independently invalidate the stale estimate when callbacks stop.

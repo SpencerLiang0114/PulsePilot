@@ -21,6 +21,8 @@ uv run uvicorn pulsepilot.app:app --host 127.0.0.1 --port 8000
 
 In another terminal, run `pnpm dev` at the repository root and open http://localhost:3000. Set `MODEL_API_KEY` in `backend/.env` to enable Muse Spark. No key is needed for FacePhys, deterministic guidance, or numerical reports. Users opt in separately before sending structured metrics to Meta. Never add an API key to a `NEXT_PUBLIC_` variable.
 
+The setup dialog offers passive observation, deterministic rules, or Muse Spark action selection. With explicit AI consent, Muse chooses among persistent observed issues, receives measured outcomes, and adapts within the session. Decisions have a two-second deadline with deterministic fallback. Reports show decision provenance and validated claims. See [P1 validation](docs/p1-verification.md) for the verified scope and limitations.
+
 The upstream source/checkpoint is downloaded to ignored `.vendor/open-rppg` at a pinned commit. Its source is MIT, but the upstream license distinguishes pretrained-model rights; see [integration notes](docs/facephys-integration.md).
 
 ## Checks

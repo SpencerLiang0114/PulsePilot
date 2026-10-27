@@ -2,6 +2,8 @@
 
 October 20, 2026. These are executed checks, not a claim that every MVP acceptance gate has been met.
 
+For the subsequent agentic sensing implementation, authenticated Meta requests and current test results, see [P1 validation](p1-verification.md). The dated checks below are retained as historical records.
+
 ## Passed
 
 | Check | Result | What it establishes |
@@ -65,7 +67,7 @@ Checked October 20, 2026. FacePhys returns `(box, landmarks, score)`, but the ad
 
 ## Not verified / external dependencies
 
-- **Muse Spark live access:** the user will receive a hackathon key later. The official API integration, strict response schemas, and failure paths are implemented/tested with mocked HTTP responses. No live Meta request or AI-generated report is claimed.
+- **Human Muse session:** authenticated API requests, a synthetic action/outcome/adaptation loop, real timeout fallback and validated report interpretation now pass; see [P1 validation](p1-verification.md). A consenting human-camera session with Muse remains unverified.
 - **Consenting-user heart rate:** no suitable human video or live physical-camera measurement was provided. A user still needs to complete this acceptance check.
 - **Physiological accuracy:** no synchronized reference data, clinical testing, or accuracy across skin tones/cameras/lighting. Higher SQI and lower variance do not establish accuracy.
 - **Permanent hosting:** the public URL is an active temporary tunnel to this Mac. It expires when the process stops and is unavailable if the Mac sleeps. Vercel authentication and persistent hosting are not provisioned.
@@ -79,4 +81,4 @@ macOS logs duplicate AVFoundation classes when PyAV and OpenCV load their bundle
 
 ## Definition-of-done status
 
-Website, capture/transport, real pretrained inference execution, deterministic sensing/guidance, closed-loop comparisons, session reports, simulation/replay, and a temporary HTTPS demonstration are integrated. Final completion still requires a real consenting-user measurement, authenticated Muse Spark calls, and the chosen durable deployment. Reference-device validation remains a separate scientific evaluation.
+Website, capture/transport, real pretrained inference execution, deterministic sensing/guidance, closed-loop comparisons, session reports, simulation/replay, and a temporary HTTPS demonstration are integrated. P1 additionally verifies authenticated Muse action selection, outcome feedback, claim validation and fallbacks on synthetic conditions. Final MVP completion still requires a real consenting-user measurement and the chosen durable deployment. Reference-device validation remains a separate scientific evaluation.

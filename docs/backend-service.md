@@ -49,10 +49,12 @@ Timestamps must be finite, nonnegative, and strictly increasing. Use the camera 
 The server acknowledges each processed frame with `{"type":"ack"}` and emits `sample` messages about twice per second:
 
 ```json
-{"type":"sample","sample":{"t":0.0,"bpm":null,"sqi":null,"usable":false,"state":"Measuring","fps":0.0,"latency_ms":0.0,"camera":{},"waveform":[]},"interventions":[]}
+{"type":"sample","sample":{"t":0.0,"bpm":null,"sqi":null,"usable":false,"state":"Measuring","fps":0.0,"latency_ms":0.0,"camera":{},"waveform":[]},"interventions":[],"coaching_state":"MONITORING","coaching_mode":"meta"}
 ```
 
 This abbreviated example omits the camera metrics; the full schemas are in `backend/pulsepilot/schemas.py`. `t` is relative to the first capture timestamp. `waveform` contains finite BVP samples, `sqi` measures periodicity, and `bpm` stays null until the reliability gate accepts sufficient fresh signal. Gaps over 250 ms reset the model and measurement window. Capture cadence, single-face visibility, lighting, motion, signal periodicity, and processing lag all affect acceptance. These checks do not establish physiological accuracy.
+
+`coaching_state` is `MONITORING`, `DECIDING`, `ACTING`, `OBSERVING`, or `COOLDOWN`. A pending decision has no new committed intervention. Each intervention includes `action_id`, `decision_source`, `explanation_source`, `decision_status`, pre/post SQI and usable fractions, averaged camera metrics and environmental changes. Reports also export the deterministic typed claim catalogue. See [agent design](agent-design.md) for selection, revalidation, fallback and cancellation behavior.
 
 Supported JSON commands after readiness:
 
