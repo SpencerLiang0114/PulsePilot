@@ -100,11 +100,15 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   await expect(page.getByRole("img", { name: "Detected face", exact: true }).locator("rect")).toHaveAttribute("x", "64");
   await expect.poll(() => heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement) =>
     canvas.getContext("2d")!.getImageData(18, 18, 1, 1).data[3])).toBeGreaterThan(0);
-  await expect(heatmap).toHaveCSS("mix-blend-mode", "screen");
+  await expect(heatmap).toHaveCSS("mix-blend-mode", "normal");
   const pixel = (x: number, y: number) => heatmap.locator("canvas").evaluate((canvas: HTMLCanvasElement, [px, py]) =>
     Array.from(canvas.getContext("2d")!.getImageData(px, py, 1, 1).data), [x, y]);
   expect(await pixel(0, 0)).toEqual([0, 0, 0, 0]);
-  expect(await pixel(35, 35)).toEqual([255, 210, 45, 255]);
+  expect(await pixel(35, 35)).toEqual([255, 230, 30, 255]);
+  const midrange = await pixel(18, 18);
+  expect(midrange[0]).toBe(255);
+  expect(midrange[1]).toBeLessThan(125);
+  expect(midrange[3]).toBeGreaterThan(180);
   heatmapPulse = 1;
   await expect.poll(async () => (await pixel(35, 35))[1]).toBe(255);
   await toggle.click();
@@ -113,18 +117,21 @@ test("live preview shows face tracking and signal, clears lost faces, and stops 
   await toggle.click();
   await expect(heatmap).toBeVisible();
   await expect(page.locator(".camera-reading strong")).toHaveText("72.0");
-  await expect(page.getByRole("img", { name: "Pulse waveform over camera preview" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Pulse waveform below camera preview" })).toBeVisible();
+  const previewBounds = await video.boundingBox();
+  const waveformBounds = await page.locator(".camera-signal").boundingBox();
+  expect(waveformBounds!.y).toBeGreaterThanOrEqual(previewBounds!.y + previewBounds!.height);
   await page.screenshot({ path: "test-results/live-camera-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await checkAlignment();
   await page.screenshot({ path: "test-results/live-camera-mobile.png", fullPage: true });
   sendHeatmap = false;
-  await expect(heatmap).toHaveCount(0, { timeout: 1200 });
+  await expect(heatmap).toHaveCount(0, { timeout: 2000 });
   sendHeatmap = true;
   await expect(heatmap).toBeVisible();
   freezeHeatmap = true;
-  await expect(heatmap).toHaveCount(0, { timeout: 1200 });
+  await expect(heatmap).toHaveCount(0, { timeout: 2000 });
   freezeHeatmap = false;
   await expect(heatmap).toBeVisible();
   faceVisible = false;
@@ -155,6 +162,60 @@ test("denied camera permission offers recovery without showing a live preview", 
   await expect(page.locator(".camera-reading")).toHaveCount(0);
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("heatmap bridges brief tracking misses while heart rate still follows current quality", async ({ page }) => {
+  await camera(page);
+  let tracking: "visible" | "held" | "lost" | "multiple" = "visible";
+  let heldFrames = 0;
+  let sendAttention = true;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    let t = 0, modelTime = 0;
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        if (JSON.parse(message).type === "start") socket.send(JSON.stringify({ type: "ready", ai_status: "not_requested" }));
+        return;
+      }
+      t += 1/30;
+      socket.send(JSON.stringify({ type: "ack" }));
+      const visible = tracking === "visible";
+      if (visible) modelTime = t;
+      if (tracking === "held") heldFrames++;
+      const metrics = { ...accepted.camera, face_visible: visible, face_count: visible ? 1 : tracking === "multiple" ? 2 : 0,
+        confidence: .6, face_size: .18, bbox: visible ? [.4, .3, .6, .55] : null };
+      if (sendAttention) socket.send(JSON.stringify({ type: "face_heatmap", t, camera: metrics,
+        heatmap: visible || tracking === "held" ? {
+          t: modelTime, bbox: [.4, .3, .6, .55], width: 36, height: 36, values: Array(1296).fill(128),
+        } : null,
+      }));
+      socket.send(JSON.stringify({ type: "sample", interventions: [], sample: {
+        ...accepted, t, bpm: visible ? 72 : null, usable: visible, camera: metrics,
+      } }));
+    });
+  });
+  await page.goto("/");
+  await start(page);
+  const heatmap = page.getByRole("img", { name: "FacePhys attention heatmap" });
+  await expect(heatmap).toBeVisible();
+  sendAttention = false;
+  // This deliberate one-second gap must bridge the old 750 ms display timeout.
+  await page.waitForTimeout(1000);
+  await expect(heatmap).toBeVisible();
+  sendAttention = true;
+  tracking = "held";
+  await expect(page.locator("#heatmap-description")).toHaveText("Reacquiring face…");
+  await expect.poll(() => heldFrames).toBeGreaterThanOrEqual(25);
+  await expect(heatmap).toBeVisible();
+  await expect(page.locator(".heart-value")).toHaveText("—BPM");
+  tracking = "visible";
+  await expect(page.locator("#heatmap-description")).toHaveText("FacePhys attention");
+  await expect(heatmap).toBeVisible();
+  tracking = "multiple";
+  await expect(heatmap).toHaveCount(0);
+  tracking = "visible";
+  await expect(heatmap).toBeVisible();
+  tracking = "lost";
+  await expect(heatmap).toHaveCount(0);
 });
 
 for (const stalled of ["capture", "samples", "sample timestamps", "acknowledgements"] as const) {

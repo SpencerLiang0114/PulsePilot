@@ -15,7 +15,7 @@ export function FaceHeatmap({ heatmap, captureSize, mirrored }: {
     const pixels = context.createImageData(heatmap.width, heatmap.height);
     const pulse = heatmap.pulse ?? .5;
     const gain = 1 + pulse * .25;
-    const stops = [[0, 0, 0, 0], [.25, 80, 0, 0], [.55, 255, 40, 0], [.85, 255, 150, 0], [1, 255, 210, 45]];
+    const stops = [[0, 0, 0, 0], [.15, 180, 0, 0], [.4, 255, 20, 0], [.65, 255, 100, 0], [.8, 255, 210, 0], [1, 255, 230, 30]];
     heatmap.values.forEach((value, i) => {
       const intensity = Math.max(0, Math.min(1, value / 255));
       const upper = stops.findIndex((stop, j) => j > 0 && intensity <= stop[0]);
@@ -24,7 +24,7 @@ export function FaceHeatmap({ heatmap, captureSize, mirrored }: {
       for (let channel = 0; channel < 3; channel++) {
         pixels.data[i * 4 + channel] = Math.min(255, Math.round((from[channel + 1] + blend * (to[channel + 1] - from[channel + 1])) * gain));
       }
-      pixels.data[i * 4 + 3] = intensity < .25 ? 0 : Math.round(255 * Math.sqrt((intensity - .25) / .75));
+      pixels.data[i * 4 + 3] = intensity < .15 ? 0 : Math.round(255 * Math.pow((intensity - .15) / .85, .35));
     });
     context.putImageData(pixels, 0, 0);
     // The demo adds pulse-driven highlights at approximate forehead, cheeks, and nose positions.

@@ -60,7 +60,7 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .mirrored { transform:scaleX(-1); }
 .capture-stage:has(video.visible) { background:#152c35; }
 .face-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.face-heatmap { opacity:.85; mix-blend-mode:screen; filter:saturate(2.4) contrast(1.35) brightness(1.12); }
+.face-heatmap { opacity:.9; mix-blend-mode:normal; }
 .face-heatmap canvas { display:block; width:100%; height:100%; }
 .heatmap-control { position:absolute; top:64px; right:14px; z-index:3; padding:9px; border:1px solid #ffffff26; border-radius:8px; background:#171b24d9; color:#e9f0ef; }
 .heatmap-control button { display:flex; align-items:center; justify-content:space-between; gap:9px; width:100%; border:0; padding:0; background:transparent; color:inherit; font-size:11px; font-weight:650; }
@@ -95,7 +95,7 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .camera-reading > div { display:flex; align-items:baseline; gap:8px; margin:3px 0; }
 .camera-reading strong { font-size:46px; line-height:1.1; font-weight:750; font-variant-numeric:tabular-nums; letter-spacing:-1.5px; }
 .camera-reading > div > span { font-size:13px; }
-.camera-signal { position:absolute; bottom:42px; left:12px; right:12px; padding:10px 12px; border:1px solid #ffffff26; border-radius:8px; background:#171b24d9; color:#e9f0ef; }
+.camera-signal { padding:10px 12px; border:1px solid #ffffff26; background:#171b24; color:#e9f0ef; }
 .camera-signal-heading { display:flex; justify-content:space-between; gap:10px; font-size:10px; }
 .camera-signal-heading > span:first-child { display:flex; align-items:center; gap:6px; }
 .camera-signal-heading > span:last-child { font-variant-numeric:tabular-nums; color:#75e1cf; }

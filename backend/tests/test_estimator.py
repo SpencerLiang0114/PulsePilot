@@ -32,6 +32,19 @@ def test_start_rejects_an_already_running_model():
         estimator.start()
 
 
+def test_start_uses_full_range_face_detector(monkeypatch):
+    import pulsepilot.estimator as module
+
+    model = Mock()
+    model.__enter__ = Mock()
+    monkeypatch.setattr(module, "weights_available", lambda: True)
+    monkeypatch.setattr(module.importlib, "import_module", lambda name: SimpleNamespace(Model=lambda name: model))
+    estimator = FacePhysEstimator()
+    estimator.start()
+    assert model.face_mode == "Far"
+    estimator.close()
+
+
 def test_close_is_idempotent_and_joins_both_worker_pools():
     model = Mock()
     estimator = FacePhysEstimator()
@@ -100,7 +113,7 @@ def test_heatmap_hides_unusable_or_uninitialized_features(heatmap_estimator, con
     elif condition == "multiple":
         estimator.camera.face_count = 2
     elif condition == "low_confidence":
-        estimator.camera.confidence = .5
+        estimator.camera.confidence = .4
     elif condition == "lag":
         estimator.last_timestamp = 12
     elif condition == "warmup":
@@ -110,6 +123,45 @@ def test_heatmap_hides_unusable_or_uninitialized_features(heatmap_estimator, con
     else:
         estimator.model.state[0][1]["tn"]["x2mean"] = np.full((1, 1, 36, 36, 32), np.nan if condition == "nan" else 1)
     assert estimator.heatmap() is None
+
+
+def test_heatmap_accepts_detector_confirmed_distant_face_and_normal_inference_delay(heatmap_estimator):
+    estimator = heatmap_estimator
+    estimator.camera.confidence = .65
+    estimator.camera.face_size = .15
+    estimator.camera.brightness = 40
+    estimator.last_timestamp = 11.3
+    assert estimator.heatmap() is not None
+
+
+def test_heatmap_holds_brief_tracking_loss_without_restarting_visual_warmup(heatmap_estimator):
+    estimator = heatmap_estimator
+    original = estimator.heatmap()
+    estimator.camera.face_visible = False
+    estimator.visible_since = None
+    estimator.last_timestamp = 12
+    assert estimator.heatmap() == original
+    assert estimator.heatmap_range is not None
+    estimator.camera.face_visible = True
+    estimator.visible_since = 12.1
+    estimator.last_timestamp = 12.1
+    estimator.model.ts = [12.05]
+    assert estimator.heatmap().t == 2.05
+
+
+@pytest.mark.parametrize("condition", ["expired", "multiple", "lag"])
+def test_heatmap_hold_never_survives_sustained_loss_multiple_faces_or_stalled_model(heatmap_estimator, condition):
+    estimator = heatmap_estimator
+    assert estimator.heatmap() is not None
+    if condition == "expired":
+        estimator.camera.face_visible = False
+        estimator.last_timestamp = 12.3
+    elif condition == "multiple":
+        estimator.camera.face_count = 2
+    else:
+        estimator.last_timestamp = 12
+    assert estimator.heatmap() is None
+    assert estimator.heatmap_range is None
 
 
 def test_heatmap_smooths_range_once_per_model_frame(heatmap_estimator):
@@ -123,7 +175,7 @@ def test_heatmap_smooths_range_once_per_model_frame(heatmap_estimator):
     second = estimator.heatmap()
     assert first.values == second.values
     assert estimator.heatmap_range == pytest.approx((0, 1295*1.05))
-    estimator.camera.face_visible = False
+    estimator.camera.face_count = 2
     assert estimator.heatmap() is None
     assert estimator.heatmap_range is None
 

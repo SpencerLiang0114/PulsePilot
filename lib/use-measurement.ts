@@ -7,6 +7,7 @@ type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameCon
 
 const FRESHNESS_LIMIT_MS = 5000;
 const FRESHNESS_CHECK_MS = 250;
+const HEATMAP_FRESHNESS_MS = 1500;
 
 export function useMeasurement(onReport: (report: Report) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -257,7 +258,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
             if (payload.camera) setCamera(payload.camera);
             if (heatmapTimeout.current !== null) window.clearTimeout(heatmapTimeout.current);
             setHeatmap(payload.heatmap);
-            heatmapTimeout.current = window.setTimeout(() => { setHeatmap(null); setCamera(null); }, 750);
+            heatmapTimeout.current = window.setTimeout(() => { setHeatmap(null); setCamera(null); }, HEATMAP_FRESHNESS_MS);
             break;
           }
           case "sample":

@@ -146,7 +146,7 @@ export function PulsePilot() {
                   }}><Maximize size={17} /></button>
                 </div>
                 {(!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
-                {liveVideo && showHeatmap && m.heatmap && camera?.face_visible && camera.face_count === 1 &&
+                {liveVideo && showHeatmap && m.heatmap && (camera?.face_count ?? 0) <= 1 &&
                   <FaceHeatmap heatmap={m.heatmap} captureSize={m.captureSize} mirrored={m.mode === "camera"} />}
                 {liveVideo && camera?.face_visible && faceBox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
                   <rect x={faceBox[0] * m.captureSize.width} y={faceBox[1] * m.captureSize.height} width={(faceBox[2] - faceBox[0]) * m.captureSize.width} height={(faceBox[3] - faceBox[1]) * m.captureSize.height} rx={showHeatmap && m.heatmap ? 0 : 12} fill="none" stroke={showHeatmap && m.heatmap ? "#ff3020" : current?.usable ? "#75e1cf" : "#ffffff"} strokeWidth={showHeatmap && m.heatmap ? 2 : 1.5} />
@@ -160,17 +160,17 @@ export function PulsePilot() {
                     <button role="switch" aria-checked={showHeatmap} aria-describedby="heatmap-description" onClick={() => setShowHeatmap(value => !value)}>
                       Face heatmap<span className="heatmap-switch" />
                     </button>
-                    <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && camera?.face_visible && camera.face_count === 1 ? "FacePhys attention" : "Waiting for face attention"}</small>
+                    <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && (camera?.face_count ?? 0) <= 1 ? camera?.face_visible ? "FacePhys attention" : "Reacquiring face…" : "Waiting for face attention"}</small>
                     {showHeatmap && <span className="heatmap-legend"><span />Low · model attention · high</span>}
                   </div>
                   <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{current?.usable && current.bpm != null ? current.bpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{current?.state ?? "Finding your face"}</span></div>
-                  <div className="camera-signal">
-                    <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>
-                    <PulseWaveform sample={current} active={measuring} label="Pulse waveform over camera preview" />
-                  </div>
                 </>}
                 <div className="camera-bottom"><span><LockKeyhole size={13} />Frames processed, never saved</span><span>{measuring ? `${Math.round(current?.fps ?? 0)} fps` : m.status === "connecting" ? "Preparing camera" : "Camera permission required"}</span></div>
               </div>
+              {liveVideo && <div className="camera-signal">
+                <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>
+                <PulseWaveform sample={current} active={measuring} label="Pulse waveform below camera preview" />
+              </div>}
               <div className="capture-controls">
                 <div className="session-length"><Clock3 size={17} /><span>{busy ? <><strong>{clockText(current?.t ?? m.history.at(-1)?.t ?? 0)}</strong> / {clockText(m.duration)}</> : <><strong>60 second</strong> guided session</>}</span></div>
                 <div className="control-buttons">{measuring ? <>

@@ -12,6 +12,8 @@ from .schemas import CameraMetrics, FaceHeatmap, Sample
 from .sensing import CameraSensing, ReliabilityGate
 
 ROOT = Path(os.getenv("FACEPHYS_ROOT", Path(__file__).resolve().parents[2] / ".vendor/open-rppg"))
+HEATMAP_TRACKING_GRACE = 1.25
+HEATMAP_MAX_LAG = 0.75
 
 
 def weights_available() -> bool:
@@ -40,6 +42,8 @@ class FacePhysEstimator:
         self.heatmap_pulses = deque(maxlen=60)
         self.heatmap_pulse_range = (0.0, 1.0)
         self.heatmap_pulse = 0.5
+        self.last_heatmap = None
+        self.last_heatmap_seen = None
 
     def start(self):
         if self.model is not None:
@@ -56,6 +60,8 @@ class FacePhysEstimator:
         model.face_resampling_pool.shutdown(wait=True)
         model.face_detection_threads = 2
         model.face_resampling_threads = 2
+        # The full-range detector also covers smaller faces at a normal seated distance.
+        model.face_mode = "Far"
         self.model = model
         try:
             model.__enter__()
@@ -122,12 +128,21 @@ class FacePhysEstimator:
         self.heatmap_pulses.clear()
         self.heatmap_pulse_range = (0.0, 1.0)
         self.heatmap_pulse = 0.5
+        self.last_heatmap = None
+        self.last_heatmap_seen = None
 
     def heatmap(self) -> FaceHeatmap | None:
         model = self.model
-        if (model is None or self.last_timestamp is None or self.visible_since is None
-                or not self.camera.face_visible or self.camera.face_count != 1
-                or self.camera.confidence < 0.8 or model.box is None):
+        if (model is None or self.last_timestamp is None or model.box is None
+                or self.camera.face_count > 1):
+            self.reset_heatmap()
+            return None
+        if (not self.camera.face_visible or self.camera.face_count != 1
+                or self.camera.confidence < 0.5 or self.visible_since is None):
+            # Hold the last real attention map through brief detector misses; never invent new values.
+            if (self.last_heatmap is not None
+                    and self.last_timestamp-self.last_heatmap_seen <= HEATMAP_TRACKING_GRACE):
+                return self.last_heatmap
             self.reset_heatmap()
             return None
         count = min(model.n_signal, len(model.ts))
@@ -135,7 +150,8 @@ class FacePhysEstimator:
             self.reset_heatmap()
             return None
         timestamp = model.ts[count-1]
-        if self.last_timestamp-timestamp > 0.2 or timestamp-self.visible_since < 0.5:
+        if (self.last_timestamp-timestamp > HEATMAP_MAX_LAG
+                or (self.last_heatmap is None and timestamp-self.visible_since < 0.5)):
             self.reset_heatmap()
             return None
         # FacePhys demo proj.tflite fm1: state_in_8 -> reshape -> mean(channels).
@@ -174,9 +190,11 @@ class FacePhysEstimator:
         y1, y2 = np.clip(box[0], 0, h)/h
         if x2 <= x1 or y2 <= y1:
             return None
-        return FaceHeatmap(t=round(timestamp-self.start_time, 3),
-                           bbox=[float(x1), float(y1), float(x2), float(y2)],
-                           values=values.reshape(-1).tolist(), pulse=self.heatmap_pulse)
+        self.last_heatmap = FaceHeatmap(t=round(timestamp-self.start_time, 3),
+                                       bbox=[float(x1), float(y1), float(x2), float(y2)],
+                                       values=values.reshape(-1).tolist(), pulse=self.heatmap_pulse)
+        self.last_heatmap_seen = self.last_timestamp
+        return self.last_heatmap
 
     def snapshot(self) -> Sample:
         model = self.model
