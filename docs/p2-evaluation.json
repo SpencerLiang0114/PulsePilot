@@ -19,17 +19,17 @@
       "agent_mode": "off",
       "source": "synthetic_fixture",
       "metrics": {
-        "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "mean_sqi": 0.47,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.166,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17200000000000001,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": null,
         "invalid_proposal_rejection_rate": null,
         "fallback_frequency": null,
@@ -43,10 +43,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.00514504100283375,
-        "policy_cpu_seconds": 0.005147000000000013,
-        "peak_traced_python_bytes": 188596,
-        "policy_windows_per_second": 23517.79119609668,
+        "policy_wall_seconds": 0.005324999998265412,
+        "policy_cpu_seconds": 0.005325000000000024,
+        "peak_traced_python_bytes": 281335,
+        "policy_windows_per_second": 22723.00470223757,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -68,22 +68,22 @@
       "agent_mode": "assist",
       "source": "synthetic_fixture",
       "metrics": {
-        "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "mean_sqi": 0.47,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.166,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17200000000000001,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": 1.0,
         "invalid_proposal_rejection_rate": 0.0,
         "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.855333250816329,
-        "model_latency_ms": 0.028853998628619593,
+        "graph_latency_ms": 4.8953959994832985,
+        "model_latency_ms": 0.043219000872340985,
         "api_requests": 0,
         "input_tokens": null,
         "output_tokens": null,
@@ -92,10 +92,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.02564133299893001,
-        "policy_cpu_seconds": 0.024034,
-        "peak_traced_python_bytes": 359849,
-        "policy_windows_per_second": 4718.943434221974,
+        "policy_wall_seconds": 0.026052249999338528,
+        "policy_cpu_seconds": 0.024445999999999968,
+        "peak_traced_python_bytes": 450226,
+        "policy_windows_per_second": 4644.512470250063,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -106,8 +106,8 @@
       ],
       "telemetry": [
         {
-          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
-          "event_id": "63f54e02-0bf7-43aa-bc8a-fba117df3c46",
+          "session_id": "8fc35ba1-f532-47fd-ba7a-0966445691c8",
+          "event_id": "8843c4a5-8f30-4ce5-b4c4-a4b73e95d75f",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -116,8 +116,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.015915997209958732,
-          "graph_latency_ms": 9.206874998199055,
+          "model_latency_ms": 0.021667001419700682,
+          "graph_latency_ms": 9.373749999213032,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -126,8 +126,8 @@
           }
         },
         {
-          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
-          "event_id": "1f72a887-dd8f-458c-a1c6-09e0d25a30c4",
+          "session_id": "8fc35ba1-f532-47fd-ba7a-0966445691c8",
+          "event_id": "b2c49d23-fe82-48d0-81b1-f7dbf17501bd",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -136,8 +136,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.013875000149710104,
-          "graph_latency_ms": 3.3323750030831434,
+          "model_latency_ms": 0.020667001081164926,
+          "graph_latency_ms": 3.4900419996120036,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -146,8 +146,8 @@
           }
         },
         {
-          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
-          "event_id": "281eaba4-4d19-488c-83ce-d5c8d5c0d731",
+          "session_id": "8fc35ba1-f532-47fd-ba7a-0966445691c8",
+          "event_id": "5a6ec05d-ba79-480e-a6f7-19efa4a11bf3",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -156,8 +156,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.01237499964190647,
-          "graph_latency_ms": 3.3161249994009268,
+          "model_latency_ms": 0.018292001186637208,
+          "graph_latency_ms": 3.2682919991202652,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -166,8 +166,8 @@
           }
         },
         {
-          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
-          "event_id": "ef96cb63-b122-4834-9eb9-645ab734ca11",
+          "session_id": "8fc35ba1-f532-47fd-ba7a-0966445691c8",
+          "event_id": "0c08c04b-5061-4867-8bb3-40d09ac7bdb4",
           "event_type": "report_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -176,8 +176,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.07324999751290306,
-          "graph_latency_ms": 3.5659580025821924,
+          "model_latency_ms": 0.11224999980186112,
+          "graph_latency_ms": 3.449499999987893,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -198,22 +198,22 @@
       "agent_mode": "adaptive",
       "source": "synthetic_fixture",
       "metrics": {
-        "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "mean_sqi": 0.47,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.166,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17200000000000001,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": 1.0,
         "invalid_proposal_rejection_rate": 0.0,
         "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.985322999345954,
-        "model_latency_ms": 0.02939575097116176,
+        "graph_latency_ms": 4.885479001131898,
+        "model_latency_ms": 0.032583498978056014,
         "api_requests": 0,
         "input_tokens": null,
         "output_tokens": null,
@@ -222,10 +222,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.026730207999207778,
-        "policy_cpu_seconds": 0.02506999999999998,
-        "peak_traced_python_bytes": 353418,
-        "policy_windows_per_second": 4526.713746619037,
+        "policy_wall_seconds": 0.02638883300096495,
+        "policy_cpu_seconds": 0.02476600000000001,
+        "peak_traced_python_bytes": 450956,
+        "policy_windows_per_second": 4585.272868852345,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -236,8 +236,8 @@
       ],
       "telemetry": [
         {
-          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
-          "event_id": "13ba72bc-be53-41b4-9a83-7d894b69740c",
+          "session_id": "fb9ed362-3716-47a3-b406-0ac4b51971c8",
+          "event_id": "601be60b-996f-4ba0-99e9-063acbb06b76",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -246,8 +246,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.024708002456463873,
-          "graph_latency_ms": 9.595624997018604,
+          "model_latency_ms": 0.019666997104650363,
+          "graph_latency_ms": 9.223041000950616,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -256,8 +256,8 @@
           }
         },
         {
-          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
-          "event_id": "96534ebe-f164-485a-8113-ee0ab94b06e2",
+          "session_id": "fb9ed362-3716-47a3-b406-0ac4b51971c8",
+          "event_id": "9f26f852-db04-47f5-a4e2-bc3f2abdc8b0",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -266,8 +266,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.015833000361453742,
-          "graph_latency_ms": 3.397291999135632,
+          "model_latency_ms": 0.018792001355905086,
+          "graph_latency_ms": 3.308375002234243,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -276,8 +276,8 @@
           }
         },
         {
-          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
-          "event_id": "7966654d-c3bd-4f04-9b37-0a2909678b25",
+          "session_id": "fb9ed362-3716-47a3-b406-0ac4b51971c8",
+          "event_id": "bf723f25-c2b6-48f5-8b20-dcea11cdffb2",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -286,8 +286,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.017624999600229785,
-          "graph_latency_ms": 3.3970000004046597,
+          "model_latency_ms": 0.02329199924133718,
+          "graph_latency_ms": 3.5412090001045726,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -296,8 +296,8 @@
           }
         },
         {
-          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
-          "event_id": "ea03812a-d0bb-4445-bd12-2f8e085d93c4",
+          "session_id": "fb9ed362-3716-47a3-b406-0ac4b51971c8",
+          "event_id": "5179cadb-aa34-48e2-aa7f-4a2d19c515c5",
           "event_type": "report_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -306,8 +306,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.05941700146649964,
-          "graph_latency_ms": 3.551375000824919,
+          "model_latency_ms": 0.06858299821033143,
+          "graph_latency_ms": 3.4692910012381617,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -329,16 +329,16 @@
       "source": "synthetic_fixture",
       "metrics": {
         "mean_sqi": 0.468,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.16733333333333333,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17066666666666666,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": null,
         "invalid_proposal_rejection_rate": null,
         "fallback_frequency": null,
@@ -352,10 +352,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.005429167002148461,
-        "policy_cpu_seconds": 0.005428999999999962,
-        "peak_traced_python_bytes": 189059,
-        "policy_windows_per_second": 22287.02855375736,
+        "policy_wall_seconds": 0.0054198329999053385,
+        "policy_cpu_seconds": 0.005416000000000032,
+        "peak_traced_python_bytes": 284152,
+        "policy_windows_per_second": 22325.411133906407,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -378,21 +378,21 @@
       "source": "synthetic_fixture",
       "metrics": {
         "mean_sqi": 0.468,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.16733333333333333,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17066666666666666,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": 1.0,
         "invalid_proposal_rejection_rate": 0.0,
         "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.87034374873474,
-        "model_latency_ms": 0.0280937501884182,
+        "graph_latency_ms": 5.294823001349869,
+        "model_latency_ms": 0.03559400010999525,
         "api_requests": 0,
         "input_tokens": null,
         "output_tokens": null,
@@ -401,10 +401,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.025699249999888707,
-        "policy_cpu_seconds": 0.024065999999999976,
-        "peak_traced_python_bytes": 370638,
-        "policy_windows_per_second": 4708.308608248256,
+        "policy_wall_seconds": 0.027811874999315478,
+        "policy_cpu_seconds": 0.026205000000000034,
+        "peak_traced_python_bytes": 463756,
+        "policy_windows_per_second": 4350.659565490573,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -415,8 +415,8 @@
       ],
       "telemetry": [
         {
-          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
-          "event_id": "06043790-ea81-44d6-a156-316a09b24f77",
+          "session_id": "c142ecb4-67bf-4f32-a3c2-ed5687c1e5d5",
+          "event_id": "ee45700c-31f5-4566-9f5e-f59f359b24f4",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -425,8 +425,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.016292000509565696,
-          "graph_latency_ms": 9.378499999002088,
+          "model_latency_ms": 0.032500000088475645,
+          "graph_latency_ms": 10.475292001501657,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -435,8 +435,8 @@
           }
         },
         {
-          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
-          "event_id": "8a0b4e4c-3126-451c-bb7e-5abaf61fd69c",
+          "session_id": "c142ecb4-67bf-4f32-a3c2-ed5687c1e5d5",
+          "event_id": "69a73508-feb4-4249-92dc-6295a77600da",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -445,8 +445,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.017750000552041456,
-          "graph_latency_ms": 3.4177089983131737,
+          "model_latency_ms": 0.01820900070015341,
+          "graph_latency_ms": 3.530125002725981,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -455,8 +455,8 @@
           }
         },
         {
-          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
-          "event_id": "bac06e22-4886-4810-8f94-fe812db823fc",
+          "session_id": "c142ecb4-67bf-4f32-a3c2-ed5687c1e5d5",
+          "event_id": "c13bd753-4711-446b-ad1c-34c3f93bfa05",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -465,8 +465,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.01308299761149101,
-          "graph_latency_ms": 3.3409579991712235,
+          "model_latency_ms": 0.017124999430961907,
+          "graph_latency_ms": 3.495332999591483,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -475,8 +475,8 @@
           }
         },
         {
-          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
-          "event_id": "dfa2718a-7d5b-4038-81c9-cafc4f50d8c4",
+          "session_id": "c142ecb4-67bf-4f32-a3c2-ed5687c1e5d5",
+          "event_id": "d167945f-b5da-488d-b447-b5ea41a75eb7",
           "event_type": "report_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -485,8 +485,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.06525000208057463,
-          "graph_latency_ms": 3.3442079984524753,
+          "model_latency_ms": 0.07454200022039004,
+          "graph_latency_ms": 3.678542001580354,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -508,21 +508,21 @@
       "source": "synthetic_fixture",
       "metrics": {
         "mean_sqi": 0.468,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.16733333333333333,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.17066666666666666,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": 1.0,
         "invalid_proposal_rejection_rate": 0.0,
         "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.638739249458013,
-        "model_latency_ms": 0.026156249987252522,
+        "graph_latency_ms": 4.943885000102455,
+        "model_latency_ms": 0.032958500923996326,
         "api_requests": 0,
         "input_tokens": null,
         "output_tokens": null,
@@ -531,10 +531,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.02513804199770675,
-        "policy_cpu_seconds": 0.023509000000000002,
-        "peak_traced_python_bytes": 357502,
-        "policy_windows_per_second": 4813.421825416569,
+        "policy_wall_seconds": 0.026577749998978106,
+        "policy_cpu_seconds": 0.024978,
+        "peak_traced_python_bytes": 450438,
+        "policy_windows_per_second": 4552.680343695473,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -545,8 +545,8 @@
       ],
       "telemetry": [
         {
-          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
-          "event_id": "01aec4c9-81a1-415d-9018-8f7a7c953428",
+          "session_id": "e2933686-32c7-4f79-8f57-0680c1677a81",
+          "event_id": "d07a0d3a-5e92-4efa-a45b-58bb61b52594",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -555,8 +555,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.012583001080201939,
-          "graph_latency_ms": 8.70220800061361,
+          "model_latency_ms": 0.01912500010803342,
+          "graph_latency_ms": 9.145541000179946,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -565,8 +565,8 @@
           }
         },
         {
-          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
-          "event_id": "e3c32d9b-08ee-48fc-aa14-6d0cc8aefb32",
+          "session_id": "e2933686-32c7-4f79-8f57-0680c1677a81",
+          "event_id": "b2fde8b8-6ed9-46a7-a183-595370d5b7e8",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -575,8 +575,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.011874999472638592,
-          "graph_latency_ms": 3.146708000713261,
+          "model_latency_ms": 0.020375002350192517,
+          "graph_latency_ms": 3.5795420008071233,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -585,8 +585,98 @@
           }
         },
         {
-          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
-          "event_id": "0db2bceb-52d6-422c-ad98-6d13482331fc",
+          "session_id": "e2933686-32c7-4f79-8f57-0680c1677a81",
+          "event_id": "449d66f0-f1ba-47a1-9460-ec56ed9fb209",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01383400012855418,
+          "graph_latency_ms": 3.352790998178534,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "e2933686-32c7-4f79-8f57-0680c1677a81",
+          "event_id": "49495453-d419-4ea4-a973-ed653a2b720e",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.07850000110920519,
+          "graph_latency_ms": 3.6976660012442153,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 2,
+      "order": [
+        "C",
+        "A",
+        "B"
+      ],
+      "condition": "C",
+      "agent_mode": "adaptive",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.167,
+        "mean_delta_usable": 0.26666666666666666,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.652896000152396,
+        "model_latency_ms": 0.028395749723131303,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.02515750000020489,
+        "policy_cpu_seconds": 0.023494999999999988,
+        "peak_traced_python_bytes": 442202,
+        "policy_windows_per_second": 4809.6988969100485,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "motion",
+        "signal",
+        "dark"
+      ],
+      "telemetry": [
+        {
+          "session_id": "92d65674-f686-4fa4-84de-108461ba67c6",
+          "event_id": "e8f53584-2609-4fbb-8836-acf97b25ca51",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -596,7 +686,7 @@
             "reason": null
           },
           "model_latency_ms": 0.0167500002135057,
-          "graph_latency_ms": 3.361332997883437,
+          "graph_latency_ms": 8.823125001072185,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -605,8 +695,48 @@
           }
         },
         {
-          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
-          "event_id": "2dec1f57-8056-464c-ad30-e1018f813e86",
+          "session_id": "92d65674-f686-4fa4-84de-108461ba67c6",
+          "event_id": "ad363d8c-be41-4e9e-b696-1c98b3a78fe5",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.016666999727021903,
+          "graph_latency_ms": 3.232541999750538,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "92d65674-f686-4fa4-84de-108461ba67c6",
+          "event_id": "adff623d-ff7c-4f90-aca0-a31a80e9a12b",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.015790999896125868,
+          "graph_latency_ms": 3.3302090014331043,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "92d65674-f686-4fa4-84de-108461ba67c6",
+          "event_id": "409b8a5c-15bf-498d-8f02-d26aaa73e8b8",
           "event_type": "report_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -615,138 +745,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.06341699918266386,
-          "graph_latency_ms": 3.344707998621743,
-          "model_identifier": "local-fixture-policy",
-          "usage": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "requests": 0
-          }
-        }
-      ]
-    },
-    {
-      "repetition": 2,
-      "order": [
-        "C",
-        "A",
-        "B"
-      ],
-      "condition": "C",
-      "agent_mode": "adaptive",
-      "source": "synthetic_fixture",
-      "metrics": {
-        "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
-        "interventions": 3,
-        "intervention_completion_rate": 1.0,
-        "outcomes": {
-          "unchanged": 2,
-          "improved": 1
-        },
-        "mean_delta_sqi": 0.16666666666666666,
-        "mean_delta_usable": 0.3333333333333333,
-        "proposal_acceptance_rate": 1.0,
-        "invalid_proposal_rejection_rate": 0.0,
-        "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.628895999303495,
-        "model_latency_ms": 0.03066600129386643,
-        "api_requests": 0,
-        "input_tokens": null,
-        "output_tokens": null,
-        "approximate_cost_usd": null,
-        "reported_capture_fps": 30.0,
-        "reported_inference_latency_ms": 0.0
-      },
-      "resources": {
-        "policy_wall_seconds": 0.024978875000670087,
-        "policy_cpu_seconds": 0.02332899999999999,
-        "peak_traced_python_bytes": 353807,
-        "policy_windows_per_second": 4844.093258673741,
-        "measurement_throughput_fps": null,
-        "inference_performance": null
-      },
-      "action_sequence": [
-        "motion",
-        "signal",
-        "dark"
-      ],
-      "telemetry": [
-        {
-          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
-          "event_id": "c1c860f0-2690-4c04-a621-286033643b8d",
-          "event_type": "coach_request",
-          "graph_version": "p2.1",
-          "route": "accepted",
-          "status": "selected",
-          "validation": {
-            "valid": true,
-            "reason": null
-          },
-          "model_latency_ms": 0.01779100057319738,
-          "graph_latency_ms": 8.849041998473695,
-          "model_identifier": "local-fixture-policy",
-          "usage": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "requests": 0
-          }
-        },
-        {
-          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
-          "event_id": "73b274c4-b0ac-4eed-ac38-74422196d05e",
-          "event_type": "coach_request",
-          "graph_version": "p2.1",
-          "route": "accepted",
-          "status": "selected",
-          "validation": {
-            "valid": true,
-            "reason": null
-          },
-          "model_latency_ms": 0.017166003090096638,
-          "graph_latency_ms": 3.1725839980936144,
-          "model_identifier": "local-fixture-policy",
-          "usage": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "requests": 0
-          }
-        },
-        {
-          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
-          "event_id": "be50ec19-e08e-4962-84f4-c838a76eeca7",
-          "event_type": "coach_request",
-          "graph_version": "p2.1",
-          "route": "accepted",
-          "status": "selected",
-          "validation": {
-            "valid": true,
-            "reason": null
-          },
-          "model_latency_ms": 0.01954099934664555,
-          "graph_latency_ms": 3.19333300285507,
-          "model_identifier": "local-fixture-policy",
-          "usage": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "requests": 0
-          }
-        },
-        {
-          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
-          "event_id": "d37a4650-de76-4fb2-bd10-133f6a776bf3",
-          "event_type": "report_request",
-          "graph_version": "p2.1",
-          "route": "accepted",
-          "status": "selected",
-          "validation": {
-            "valid": true,
-            "reason": null
-          },
-          "model_latency_ms": 0.06816600216552615,
-          "graph_latency_ms": 3.3006249977916013,
+          "model_latency_ms": 0.06437499905587174,
+          "graph_latency_ms": 3.225707998353755,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -768,16 +768,16 @@
       "source": "synthetic_fixture",
       "metrics": {
         "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.16666666666666666,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.167,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": null,
         "invalid_proposal_rejection_rate": null,
         "fallback_frequency": null,
@@ -791,10 +791,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.004975042000296526,
-        "policy_cpu_seconds": 0.004977000000000009,
-        "peak_traced_python_bytes": 186178,
-        "policy_windows_per_second": 24321.402712336516,
+        "policy_wall_seconds": 0.005132124999363441,
+        "policy_cpu_seconds": 0.005132999999999999,
+        "peak_traced_python_bytes": 278925,
+        "policy_windows_per_second": 23576.978350100228,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -817,21 +817,21 @@
       "source": "synthetic_fixture",
       "metrics": {
         "mean_sqi": 0.469,
-        "usable_fraction": 0.33884297520661155,
-        "time_to_stable_seconds": 40.0,
+        "usable_fraction": 0.32231404958677684,
+        "time_to_stable_seconds": 41.0,
         "interventions": 3,
         "intervention_completion_rate": 1.0,
         "outcomes": {
           "unchanged": 2,
           "improved": 1
         },
-        "mean_delta_sqi": 0.16666666666666666,
-        "mean_delta_usable": 0.3333333333333333,
+        "mean_delta_sqi": 0.167,
+        "mean_delta_usable": 0.26666666666666666,
         "proposal_acceptance_rate": 1.0,
         "invalid_proposal_rejection_rate": 0.0,
         "fallback_frequency": 0.0,
-        "graph_latency_ms": 4.699635249380663,
-        "model_latency_ms": 0.03967724933318095,
+        "graph_latency_ms": 4.905739499918127,
+        "model_latency_ms": 0.04168750092503615,
         "api_requests": 0,
         "input_tokens": null,
         "output_tokens": null,
@@ -840,10 +840,10 @@
         "reported_inference_latency_ms": 0.0
       },
       "resources": {
-        "policy_wall_seconds": 0.025194665999151766,
-        "policy_cpu_seconds": 0.02357300000000001,
-        "peak_traced_python_bytes": 355277,
-        "policy_windows_per_second": 4802.603852897821,
+        "policy_wall_seconds": 0.02598879200013471,
+        "policy_cpu_seconds": 0.024352999999999958,
+        "peak_traced_python_bytes": 448430,
+        "policy_windows_per_second": 4655.853184687185,
         "measurement_throughput_fps": null,
         "inference_performance": null
       },
@@ -854,8 +854,8 @@
       ],
       "telemetry": [
         {
-          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
-          "event_id": "1f3b588b-78a4-4bb8-9ae0-b01ec7727e80",
+          "session_id": "92b914cc-60bf-4277-b6c6-16e043fd5552",
+          "event_id": "01fc676b-3224-432d-bd82-0e91769fdf0c",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -864,8 +864,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.021500000002561137,
-          "graph_latency_ms": 9.062291999725858,
+          "model_latency_ms": 0.019292001525172964,
+          "graph_latency_ms": 9.35679200119921,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -874,8 +874,8 @@
           }
         },
         {
-          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
-          "event_id": "11554bad-e2a6-47ca-9644-3ba467d3e4cb",
+          "session_id": "92b914cc-60bf-4277-b6c6-16e043fd5552",
+          "event_id": "e1283596-32d0-4b90-b216-dedfef356be5",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -884,8 +884,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.018874998204410076,
-          "graph_latency_ms": 3.303957997559337,
+          "model_latency_ms": 0.01487500048824586,
+          "graph_latency_ms": 3.391040998394601,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -894,8 +894,8 @@
           }
         },
         {
-          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
-          "event_id": "b432a35f-6a50-4ecc-89a1-6db6b695f670",
+          "session_id": "92b914cc-60bf-4277-b6c6-16e043fd5552",
+          "event_id": "5a387fe9-b5f0-4338-b9ac-68c00783c10c",
           "event_type": "coach_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -904,8 +904,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.01412499841535464,
-          "graph_latency_ms": 3.2044580002548173,
+          "model_latency_ms": 0.01945800249814056,
+          "graph_latency_ms": 3.48166700132424,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,
@@ -914,8 +914,8 @@
           }
         },
         {
-          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
-          "event_id": "0f1fb7ab-c140-4335-8afc-7d0c665760c7",
+          "session_id": "92b914cc-60bf-4277-b6c6-16e043fd5552",
+          "event_id": "26cb10de-897d-4ee2-9d64-d1cf30627ff6",
           "event_type": "report_request",
           "graph_version": "p2.1",
           "route": "accepted",
@@ -924,8 +924,8 @@
             "valid": true,
             "reason": null
           },
-          "model_latency_ms": 0.10420900071039796,
-          "graph_latency_ms": 3.2278329999826383,
+          "model_latency_ms": 0.1131249991885852,
+          "graph_latency_ms": 3.3934579987544566,
           "model_identifier": "local-fixture-policy",
           "usage": {
             "input_tokens": null,

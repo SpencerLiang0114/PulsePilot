@@ -61,6 +61,7 @@ def test_websocket_modes_preserve_or_change_only_authorized_outputs(monkeypatch,
                 if mode in ("off", "observe") or len(reports) == 2:
                     break
         item = reports[0]["interventions"][0]
+        assert reports[0]["agent_mode"] == mode
         assert item["action_id"] == ("motion" if mode == "adaptive" else "dark")
         assert item["decision_source"] == ("muse" if mode == "adaptive" else "rules")
         assert item["explanation_source"] == ("muse" if mode in ("assist", "adaptive") else "rules")
@@ -71,6 +72,7 @@ def test_websocket_modes_preserve_or_change_only_authorized_outputs(monkeypatch,
             assert reports[1]["samples"] == reports[0]["samples"]
             assert reports[1]["interventions"] == reports[0]["interventions"]
             assert item["agent_event_id"] and item["graph_version"]
+            assert reports[1]["agent_telemetry"][-1]["event_type"] == "report_request"
         else:
             assert reports[0]["analyst"] == "deterministic"
         if mode == "adaptive":

@@ -11,6 +11,7 @@ from pulsepilot.orchestration.service import OrchestrationService
 
 
 def service(event, **kwargs):
+    kwargs.setdefault("mode", "adaptive")
     return OrchestrationService(session_id=event.session_id, ai_consent=True, provider=FakeProvider(), **kwargs)
 
 
@@ -45,7 +46,7 @@ async def test_deadline_cancels_provider_and_uses_deterministic_fallback(monkeyp
                 cancelled.set()
 
     event = coach_event()
-    runner = OrchestrationService(session_id=event.session_id, ai_consent=True, provider=Slow())
+    runner = OrchestrationService(session_id=event.session_id, mode="adaptive", ai_consent=True, provider=Slow())
     start = time.monotonic()
     result = await runner.run_coach_event(event)
     assert started.is_set() and cancelled.is_set()
@@ -67,7 +68,7 @@ async def test_terminal_session_paths_cancel_and_drain_tasks(terminal):
                 cancelled.set()
 
     event = coach_event()
-    runner = OrchestrationService(session_id=event.session_id, ai_consent=True, provider=Slow())
+    runner = OrchestrationService(session_id=event.session_id, mode="adaptive", ai_consent=True, provider=Slow())
     task = asyncio.create_task(runner.run_coach_event(event))
     await started.wait()
     await getattr(runner, terminal)()
@@ -89,7 +90,7 @@ async def test_session_consent_cannot_be_escalated_by_event():
     event = coach_event(ai_consent=True)
     provider = FakeProvider()
     provider.propose = AsyncMock(side_effect=AssertionError("unauthorized call"))
-    runner = OrchestrationService(session_id=event.session_id, ai_consent=False, provider=provider)
+    runner = OrchestrationService(session_id=event.session_id, mode="adaptive", ai_consent=False, provider=provider)
     assert (await runner.run_coach_event(event)).status == "not_requested"
     provider.propose.assert_not_called()
 
@@ -129,3 +130,11 @@ async def test_parent_tracing_configuration_cannot_export_graph_payloads(monkeyp
     event = coach_event()
     assert (await service(event).run_coach_event(event)).route == "accepted"
     create_run.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["observe", "assist"])
+async def test_service_rejects_selection_when_mode_does_not_allow_it(mode):
+    event = coach_event()
+    runner = service(event, mode=mode)
+    assert (await runner.run_coach_event(event)).status == "mode_restricted"
+    assert runner._graphs is None

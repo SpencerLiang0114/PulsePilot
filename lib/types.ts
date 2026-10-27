@@ -43,6 +43,11 @@ export type Report = {
   };
   samples: Sample[]; interventions: Intervention[]; evidence: Record<string, string>; analysis: Analysis; claims: GroundedClaim[];
   agent_event_id?: string | null; graph_version?: string | null;
+  agent_mode?: AgentMode | null;
+  agent_telemetry?: { event_id: string; session_id: string; event_type: "coach_request" | "report_request";
+    graph_version: string; model_identifier: string | null; route: string; status: string;
+    validation_result: boolean; fallback_reason: string | null; model_latency_ms: number; graph_latency_ms: number;
+    api_requests: number; input_tokens: number | null; output_tokens: number | null }[];
 };
 export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean; agent_mode?: AgentMode };
 

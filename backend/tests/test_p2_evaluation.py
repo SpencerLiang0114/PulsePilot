@@ -26,10 +26,33 @@ async def test_policy_ablation_uses_the_same_trace_without_inventing_user_respon
 
 def test_empty_report_has_missing_telemetry_instead_of_assumed_usage(harness):
     from pulsepilot.reports import build_report
-    from pulsepilot.schemas import SessionConfig
+    from pulsepilot.schemas import Intervention, SessionConfig
 
     result = harness.metrics(build_report(SessionConfig(), [], []), [])
     assert result["mean_sqi"] is None and result["time_to_stable_seconds"] is None
     assert result["proposal_acceptance_rate"] is None
     assert result["graph_latency_ms"] is None
     assert result["api_requests"] is None and result["input_tokens"] is None
+    report = build_report(SessionConfig(), [], [])
+    report.interventions = [Intervention(id="early", issue="dark", action="Face a light.",
+                                         started_at=10, evaluated_at=12, outcome="inconclusive")]
+    early = harness.metrics(report, [])
+    assert early["intervention_completion_rate"] == 0
+    assert early["outcomes"] == {"inconclusive": 1}
+    assert early["mean_delta_usable"] is None
+
+
+async def test_exported_telemetry_preserves_observed_usage_and_no_payload(harness):
+    from pulsepilot.orchestration.service import OrchestrationService
+    from pulsepilot.reports import build_report
+    from pulsepilot.schemas import SessionConfig
+
+    report = build_report(SessionConfig(), [], [])
+    runner = OrchestrationService(ai_consent=True, provider=harness.FixtureProvider())
+    await runner.run_report_event(runner.report_event(report))
+    report.agent_telemetry = runner.telemetry.snapshot()
+    assert len(report.agent_telemetry) == 1
+    exported = harness.exported_telemetry(report)
+    assert harness.metrics(report, exported)["api_requests"] == 0
+    assert "bundle" not in report.agent_telemetry[0].model_dump_json()
+    await runner.close()

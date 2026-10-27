@@ -172,7 +172,8 @@ async def measurement(ws: WebSocket):
                 decision_proposal_id = coach.proposal.proposal_id
                 event = orchestration.coach_event(coach.proposal, "select")
             elif (committed is not None and orchestration.mode != "off" and config.coaching == "meta"
-                  and decision_task is None):
+                  and decision_task is None
+                  and (orchestration.mode == "observe" or committed.issue not in ("face", "cadence"))):
                 candidates = coach.candidates(sample)
                 if orchestration.mode == "assist":
                     candidates = [c for c in candidates if c.action_id == committed.action_id]
@@ -250,6 +251,8 @@ async def measurement(ws: WebSocket):
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
         report = build_report(config, samples, coach.interventions)
+        report.agent_mode = orchestration.mode
+        report.agent_telemetry = orchestration.telemetry.snapshot()
         report_visible = orchestration.mode in ("assist", "adaptive") and ai_status == "ready"
         report.ai_status = "pending" if report_visible else "observed" if ai_status == "ready" else ai_status
         await send({"type": "report", "report": report.model_dump()})
@@ -271,6 +274,7 @@ async def measurement(ws: WebSocket):
                 else:
                     report.ai_status = "unavailable"
                 report.agent_event_id, report.graph_version = outcome.event_id, outcome.graph_version
+                report.agent_telemetry = orchestration.telemetry.snapshot()
                 await send({"type": "report", "report": report.model_dump()})
     except WebSocketDisconnect:
         pass

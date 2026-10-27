@@ -110,6 +110,10 @@ class CoachEvent(Event):
             raise ValueError("Measurement timestamp must match context")
         if self.purpose == "explain" and self.context.intervention_id is None:
             raise ValueError("Explanation requires a committed intervention")
+        if self.purpose == "explain" and len(self.context.candidates) != 1:
+            raise ValueError("Explanation must identify exactly one committed action")
+        if self.purpose == "select" and self.context.intervention_id is not None:
+            raise ValueError("Selection must precede commitment")
         return self
 
 

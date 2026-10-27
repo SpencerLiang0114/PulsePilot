@@ -64,6 +64,8 @@ class OrchestrationService:
     def __init__(self, *, session_id=None, mode: AgentMode | None = None, ai_consent=False, provider=None):
         self.session_id = session_id or str(uuid4())
         self.mode = mode if mode is not None else configured_mode()
+        if self.mode not in ("off", "observe", "assist", "adaptive"):
+            raise ValueError("Unknown agent mode")
         self.ai_consent = ai_consent
         self.provider = provider or MetaProvider()
         self.telemetry = Telemetry()
@@ -108,6 +110,11 @@ class OrchestrationService:
             return fallback(event, "stale_event", "discarded")
         if self.mode == "off":
             return fallback(event, "off", "disabled")
+        if isinstance(event, CoachEvent) and (
+            (self.mode == "assist" and event.purpose != "explain")
+            or (self.mode == "observe" and event.purpose != "observe")
+        ):
+            return fallback(event, "mode_restricted", "discarded")
         event = event.model_copy(update={"ai_consent": self.ai_consent and event.ai_consent})
         started = time.perf_counter()
         usage = {"requests": 0}

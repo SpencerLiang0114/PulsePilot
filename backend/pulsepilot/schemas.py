@@ -199,6 +199,23 @@ class Statistics(StrictModel):
     alignment_issue_fraction: float
 
 
+class AgentTrace(StrictModel):
+    event_id: str
+    session_id: str
+    event_type: Literal["coach_request", "report_request"]
+    graph_version: str
+    model_identifier: str | None
+    route: str
+    status: str
+    validation_result: bool
+    fallback_reason: str | None
+    model_latency_ms: float
+    graph_latency_ms: float
+    api_requests: int
+    input_tokens: int | None
+    output_tokens: int | None
+
+
 class Report(StrictModel):
     id: str
     created_at: str
@@ -213,3 +230,5 @@ class Report(StrictModel):
     claims: list[GroundedClaim] = Field(default_factory=list)
     agent_event_id: str | None = None
     graph_version: str | None = None
+    agent_mode: Literal["off", "observe", "assist", "adaptive"] | None = None
+    agent_telemetry: list[AgentTrace] = Field(default_factory=list, max_length=256)
