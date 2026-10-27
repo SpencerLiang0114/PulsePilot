@@ -1,0 +1,939 @@
+{
+  "seed": 27,
+  "provider": "local fixture; zero remote API requests",
+  "protocol": "Same scripted trace in A/B/C; randomized order; identical 5/3/5/8 windows and gates.",
+  "limits": [
+    "Synthetic quality is independent of instructions; no simulated user response.",
+    "Policy execution timings include orchestration, not FacePhys acquisition throughput.",
+    "No physical-camera, causal benefit, or reference HR accuracy result."
+  ],
+  "trials": [
+    {
+      "repetition": 0,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "A",
+      "agent_mode": "off",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.166,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": null,
+        "invalid_proposal_rejection_rate": null,
+        "fallback_frequency": null,
+        "graph_latency_ms": null,
+        "model_latency_ms": null,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.00514504100283375,
+        "policy_cpu_seconds": 0.005147000000000013,
+        "peak_traced_python_bytes": 188596,
+        "policy_windows_per_second": 23517.79119609668,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": []
+    },
+    {
+      "repetition": 0,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "B",
+      "agent_mode": "assist",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.166,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.855333250816329,
+        "model_latency_ms": 0.028853998628619593,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.02564133299893001,
+        "policy_cpu_seconds": 0.024034,
+        "peak_traced_python_bytes": 359849,
+        "policy_windows_per_second": 4718.943434221974,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": [
+        {
+          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
+          "event_id": "63f54e02-0bf7-43aa-bc8a-fba117df3c46",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.015915997209958732,
+          "graph_latency_ms": 9.206874998199055,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
+          "event_id": "1f72a887-dd8f-458c-a1c6-09e0d25a30c4",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.013875000149710104,
+          "graph_latency_ms": 3.3323750030831434,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
+          "event_id": "281eaba4-4d19-488c-83ce-d5c8d5c0d731",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01237499964190647,
+          "graph_latency_ms": 3.3161249994009268,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "62ad90cd-09b7-468c-9691-ed18683d9cf4",
+          "event_id": "ef96cb63-b122-4834-9eb9-645ab734ca11",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.07324999751290306,
+          "graph_latency_ms": 3.5659580025821924,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 0,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "C",
+      "agent_mode": "adaptive",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.166,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.985322999345954,
+        "model_latency_ms": 0.02939575097116176,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.026730207999207778,
+        "policy_cpu_seconds": 0.02506999999999998,
+        "peak_traced_python_bytes": 353418,
+        "policy_windows_per_second": 4526.713746619037,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "motion",
+        "signal",
+        "dark"
+      ],
+      "telemetry": [
+        {
+          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
+          "event_id": "13ba72bc-be53-41b4-9a83-7d894b69740c",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.024708002456463873,
+          "graph_latency_ms": 9.595624997018604,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
+          "event_id": "96534ebe-f164-485a-8113-ee0ab94b06e2",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.015833000361453742,
+          "graph_latency_ms": 3.397291999135632,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
+          "event_id": "7966654d-c3bd-4f04-9b37-0a2909678b25",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.017624999600229785,
+          "graph_latency_ms": 3.3970000004046597,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "ad13b106-5c18-4b29-adb2-09ae0887a416",
+          "event_id": "ea03812a-d0bb-4445-bd12-2f8e085d93c4",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.05941700146649964,
+          "graph_latency_ms": 3.551375000824919,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 1,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "A",
+      "agent_mode": "off",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.468,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16733333333333333,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": null,
+        "invalid_proposal_rejection_rate": null,
+        "fallback_frequency": null,
+        "graph_latency_ms": null,
+        "model_latency_ms": null,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.005429167002148461,
+        "policy_cpu_seconds": 0.005428999999999962,
+        "peak_traced_python_bytes": 189059,
+        "policy_windows_per_second": 22287.02855375736,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": []
+    },
+    {
+      "repetition": 1,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "B",
+      "agent_mode": "assist",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.468,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16733333333333333,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.87034374873474,
+        "model_latency_ms": 0.0280937501884182,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.025699249999888707,
+        "policy_cpu_seconds": 0.024065999999999976,
+        "peak_traced_python_bytes": 370638,
+        "policy_windows_per_second": 4708.308608248256,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": [
+        {
+          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
+          "event_id": "06043790-ea81-44d6-a156-316a09b24f77",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.016292000509565696,
+          "graph_latency_ms": 9.378499999002088,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
+          "event_id": "8a0b4e4c-3126-451c-bb7e-5abaf61fd69c",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.017750000552041456,
+          "graph_latency_ms": 3.4177089983131737,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
+          "event_id": "bac06e22-4886-4810-8f94-fe812db823fc",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01308299761149101,
+          "graph_latency_ms": 3.3409579991712235,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "e3ded2d1-e7a5-4c74-9124-bb30b95cce6e",
+          "event_id": "dfa2718a-7d5b-4038-81c9-cafc4f50d8c4",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.06525000208057463,
+          "graph_latency_ms": 3.3442079984524753,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 1,
+      "order": [
+        "A",
+        "B",
+        "C"
+      ],
+      "condition": "C",
+      "agent_mode": "adaptive",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.468,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16733333333333333,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.638739249458013,
+        "model_latency_ms": 0.026156249987252522,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.02513804199770675,
+        "policy_cpu_seconds": 0.023509000000000002,
+        "peak_traced_python_bytes": 357502,
+        "policy_windows_per_second": 4813.421825416569,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "motion",
+        "signal",
+        "dark"
+      ],
+      "telemetry": [
+        {
+          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
+          "event_id": "01aec4c9-81a1-415d-9018-8f7a7c953428",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.012583001080201939,
+          "graph_latency_ms": 8.70220800061361,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
+          "event_id": "e3c32d9b-08ee-48fc-aa14-6d0cc8aefb32",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.011874999472638592,
+          "graph_latency_ms": 3.146708000713261,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
+          "event_id": "0db2bceb-52d6-422c-ad98-6d13482331fc",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.0167500002135057,
+          "graph_latency_ms": 3.361332997883437,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "713890f3-2129-4e55-9028-b919f25ac7e9",
+          "event_id": "2dec1f57-8056-464c-ad30-e1018f813e86",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.06341699918266386,
+          "graph_latency_ms": 3.344707998621743,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 2,
+      "order": [
+        "C",
+        "A",
+        "B"
+      ],
+      "condition": "C",
+      "agent_mode": "adaptive",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16666666666666666,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.628895999303495,
+        "model_latency_ms": 0.03066600129386643,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.024978875000670087,
+        "policy_cpu_seconds": 0.02332899999999999,
+        "peak_traced_python_bytes": 353807,
+        "policy_windows_per_second": 4844.093258673741,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "motion",
+        "signal",
+        "dark"
+      ],
+      "telemetry": [
+        {
+          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
+          "event_id": "c1c860f0-2690-4c04-a621-286033643b8d",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01779100057319738,
+          "graph_latency_ms": 8.849041998473695,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
+          "event_id": "73b274c4-b0ac-4eed-ac38-74422196d05e",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.017166003090096638,
+          "graph_latency_ms": 3.1725839980936144,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
+          "event_id": "be50ec19-e08e-4962-84f4-c838a76eeca7",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01954099934664555,
+          "graph_latency_ms": 3.19333300285507,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "03058e9b-9591-4a3f-a42b-68f116ba0acb",
+          "event_id": "d37a4650-de76-4fb2-bd10-133f6a776bf3",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.06816600216552615,
+          "graph_latency_ms": 3.3006249977916013,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    },
+    {
+      "repetition": 2,
+      "order": [
+        "C",
+        "A",
+        "B"
+      ],
+      "condition": "A",
+      "agent_mode": "off",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16666666666666666,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": null,
+        "invalid_proposal_rejection_rate": null,
+        "fallback_frequency": null,
+        "graph_latency_ms": null,
+        "model_latency_ms": null,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.004975042000296526,
+        "policy_cpu_seconds": 0.004977000000000009,
+        "peak_traced_python_bytes": 186178,
+        "policy_windows_per_second": 24321.402712336516,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": []
+    },
+    {
+      "repetition": 2,
+      "order": [
+        "C",
+        "A",
+        "B"
+      ],
+      "condition": "B",
+      "agent_mode": "assist",
+      "source": "synthetic_fixture",
+      "metrics": {
+        "mean_sqi": 0.469,
+        "usable_fraction": 0.33884297520661155,
+        "time_to_stable_seconds": 40.0,
+        "interventions": 3,
+        "intervention_completion_rate": 1.0,
+        "outcomes": {
+          "unchanged": 2,
+          "improved": 1
+        },
+        "mean_delta_sqi": 0.16666666666666666,
+        "mean_delta_usable": 0.3333333333333333,
+        "proposal_acceptance_rate": 1.0,
+        "invalid_proposal_rejection_rate": 0.0,
+        "fallback_frequency": 0.0,
+        "graph_latency_ms": 4.699635249380663,
+        "model_latency_ms": 0.03967724933318095,
+        "api_requests": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "approximate_cost_usd": null,
+        "reported_capture_fps": 30.0,
+        "reported_inference_latency_ms": 0.0
+      },
+      "resources": {
+        "policy_wall_seconds": 0.025194665999151766,
+        "policy_cpu_seconds": 0.02357300000000001,
+        "peak_traced_python_bytes": 355277,
+        "policy_windows_per_second": 4802.603852897821,
+        "measurement_throughput_fps": null,
+        "inference_performance": null
+      },
+      "action_sequence": [
+        "dark",
+        "motion",
+        "signal"
+      ],
+      "telemetry": [
+        {
+          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
+          "event_id": "1f3b588b-78a4-4bb8-9ae0-b01ec7727e80",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.021500000002561137,
+          "graph_latency_ms": 9.062291999725858,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
+          "event_id": "11554bad-e2a6-47ca-9644-3ba467d3e4cb",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.018874998204410076,
+          "graph_latency_ms": 3.303957997559337,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
+          "event_id": "b432a35f-6a50-4ecc-89a1-6db6b695f670",
+          "event_type": "coach_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.01412499841535464,
+          "graph_latency_ms": 3.2044580002548173,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        },
+        {
+          "session_id": "d8599f0a-e319-4a7c-a666-d9b818fcfc73",
+          "event_id": "0f1fb7ab-c140-4335-8afc-7d0c665760c7",
+          "event_type": "report_request",
+          "graph_version": "p2.1",
+          "route": "accepted",
+          "status": "selected",
+          "validation": {
+            "valid": true,
+            "reason": null
+          },
+          "model_latency_ms": 0.10420900071039796,
+          "graph_latency_ms": 3.2278329999826383,
+          "model_identifier": "local-fixture-policy",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "requests": 0
+          }
+        }
+      ]
+    }
+  ]
+}

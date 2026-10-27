@@ -21,6 +21,8 @@ class MetaProvider:
     async def _generate(self, schema, event, payload, instruction):
         if not event.ai_consent:
             raise RuntimeError("Model transfer not authorized")
+        if not agents.configured():
+            raise RuntimeError("Meta key is not configured")
         usage = invocation_usage.get()
         if usage is not None:
             usage["requests"] += 1

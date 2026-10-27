@@ -116,16 +116,18 @@ class OrchestrationService:
         try:
             # Disable external tracing even when a parent process has tracing environment variables.
             with tracing_context(enabled=False):
-                if self._graphs is None:
-                    self._graphs = build_graphs(self.provider)
                 try:
                     async with asyncio.timeout(deadline-age):
+                        if self._graphs is None:
+                            self._graphs = build_graphs(self.provider)
                         state = await self._graphs[graph_index].ainvoke({"event": event})
                         outcome = state["outcome"]
                 except TimeoutError:
                     outcome = fallback(event, "timeout")
             if self.closed or (graph_index == 0 and not self.measuring):
                 outcome = fallback(event, "inactive_session", "discarded")
+            elif time.monotonic()-event.issued_at >= deadline:
+                outcome = fallback(event, "timeout")
             elapsed = (time.perf_counter()-started)*1000
             outcome = outcome.model_copy(update={
                 "graph_latency_ms": elapsed, "usage": read_usage(usage),
@@ -137,11 +139,6 @@ class OrchestrationService:
         finally:
             self._running.pop(event.event_id, None)
             invocation_usage.reset(token)
-
-    def invalidate(self, event_id):
-        running = self._running.get(event_id)
-        if running is not None:
-            running[1].cancel()
 
     async def finish_measurement(self):
         self.measuring = False

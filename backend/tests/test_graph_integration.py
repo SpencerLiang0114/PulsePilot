@@ -109,3 +109,60 @@ def test_disconnect_during_report_cancels_model_and_releases_capacity(monkeypatc
             assert ws.receive_json()["type"] == "ready"
             ws.send_json({"type": "finish"})
             assert ws.receive_json()["report"]["ai_status"] == "not_requested"
+
+
+def test_camera_frames_and_acks_continue_while_agent_is_pending(monkeypatch):
+    from test_protocol import frame_packet
+
+    import pulsepilot.app as module
+
+    started, cancelled = threading.Event(), threading.Event()
+    monkeypatch.setenv("AGENT_MODE", "adaptive")
+    monkeypatch.setattr(agents, "configured", lambda: True)
+
+    class Estimator:
+        start_time = None
+        camera = bad(0).camera
+
+        def start(self): pass
+
+        def push(self, rgb, timestamp):
+            if self.start_time is None:
+                self.start_time = timestamp
+            self.t = timestamp-self.start_time
+
+        def snapshot(self): return bad(self.t)
+
+        def heatmap(self): return None
+
+        def close(self): pass
+
+    async def slow(self, event):
+        started.set()
+        try:
+            await asyncio.Future()
+        finally:
+            cancelled.set()
+
+    monkeypatch.setattr(module, "FacePhysEstimator", Estimator)
+    monkeypatch.setattr(MetaProvider, "propose", slow)
+    with TestClient(app) as client, client.websocket_connect(
+        "/ws/measure", headers={"origin": "http://localhost:3000"}
+    ) as ws:
+        ws.send_json({"mode": "camera", "frame_consent": True, "ai_consent": True})
+        assert ws.receive_json()["type"] == "status"
+        assert ws.receive_json()["type"] == "ready"
+        acknowledgements = 0
+        for i in range(16):
+            ws.send_bytes(frame_packet(i*.5))
+            while True:
+                message = ws.receive_json()
+                if message["type"] == "ack":
+                    acknowledgements += 1
+                    break
+        assert started.wait(2)
+        assert acknowledgements == 16 and not cancelled.is_set()
+        ws.send_json({"type": "finish"})
+        assert ws.receive_json()["report"]["interventions"] == []
+        assert cancelled.wait(2)
+        assert not client.get("/health").json()["busy"]

@@ -117,3 +117,15 @@ async def test_telemetry_contains_only_safe_metadata(caplog):
     for forbidden in ("brightness", "sqi", "waveform", "context", "explanation", "MODEL_API_KEY"):
         assert forbidden not in caplog.text
     assert event.event_id in caplog.text and "graph_latency_ms" in caplog.text
+
+
+async def test_parent_tracing_configuration_cannot_export_graph_payloads(monkeypatch):
+    import langsmith
+
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
+    create_run = AsyncMock(side_effect=AssertionError("External trace"))
+    monkeypatch.setattr(langsmith.Client, "create_run", create_run)
+    event = coach_event()
+    assert (await service(event).run_coach_event(event)).route == "accepted"
+    create_run.assert_not_called()

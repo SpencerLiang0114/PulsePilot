@@ -17,6 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from pulsepilot import agents
 from pulsepilot.app import app
+from pulsepilot.orchestration.provider import MetaProvider
+from pulsepilot.orchestration.service import COACH_DEADLINE
+from pulsepilot.orchestration.telemetry import Telemetry
 from pulsepilot.schemas import CameraMetrics, Sample
 
 
@@ -37,18 +40,23 @@ def main():
     if not agents.configured():
         parser.error("Configure MODEL_API_KEY in backend/.env first")
     timings, contexts = [], []
-    original = agents.SensingDecisionAgent.decide
+    original = MetaProvider.propose
+    original_record = Telemetry.record
 
-    async def measured(self, context):
-        contexts.append(context.model_dump())
-        started = time.monotonic()
-        result = await original(self, context)
-        timings.append({"latency_ms": round((time.monotonic()-started)*1000), "status": result.status})
-        return result
+    async def measured(self, event):
+        contexts.append(event.context.model_dump())
+        return await original(self, event)
+
+    def recorded(self, outcome):
+        timings.append(outcome.model_dump(exclude={"action", "analysis"}))
+        original_record(self, outcome)
 
     states = set()
-    with patch("pulsepilot.app.simulated_sample", scenario), patch.object(
-        agents.SensingDecisionAgent, "decide", measured
+    started = time.monotonic()
+    with patch.dict(os.environ, {"AGENT_MODE": "adaptive"}), patch(
+        "pulsepilot.app.simulated_sample", scenario
+    ), patch.object(MetaProvider, "propose", measured), patch.object(
+        Telemetry, "record", recorded
     ), TestClient(app) as client, client.websocket_connect(
         "/ws/measure", headers={"origin": "http://localhost:3000"}
     ) as ws:
@@ -69,7 +77,8 @@ def main():
                 break
     result = {
         "scenario": "synthetic persistent darkness and motion; constant SQI; real Meta requests",
-        "model": os.getenv("META_MODEL", "muse-spark-1.3"), "decision_deadline_seconds": 2,
+        "model": os.getenv("META_MODEL", "muse-spark-1.3"), "decision_deadline_seconds": COACH_DEADLINE,
+        "elapsed_seconds": round(time.monotonic()-started, 2),
         "requests": timings, "states": sorted(states),
         "sample_count": len(report["samples"]),
         "interventions": [{k: i[k] for k in (
@@ -85,8 +94,8 @@ def main():
         args.output.write_text(encoded)
     print(encoded, end="")
     assert len(result["interventions"]) >= 2, "The closed loop did not complete two interventions"
-    assert any(i["decision_source"] == "muse" for i in result["interventions"]), "Only fallback decisions completed"
     assert result["subsequent_decision_received_outcomes"], "Outcome feedback was not delivered"
+    assert result["report_ai_status"] == "complete", "Live Muse report did not validate; inspect recorded statuses"
 
 
 if __name__ == "__main__":
