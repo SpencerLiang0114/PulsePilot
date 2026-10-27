@@ -90,7 +90,7 @@ def validate_decision(decision: AgentDecision, context: DecisionContext) -> bool
 
 
 class SensingDecisionAgent:
-    DEADLINE = 2.0
+    DEADLINE = 1.5
 
     async def decide(self, context: DecisionContext) -> DecisionResult:
         try:

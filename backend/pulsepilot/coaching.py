@@ -135,20 +135,25 @@ class MeasurementCoach:
         if self.mode != "meta" or candidates[0].issue in ("face", "cadence"):
             status = "safety" if candidates[0].issue in ("face", "cadence") else self.rule_status
             return self._commit(candidates[0], sample, "rules", status)
-        if remaining < self.RESPONSE+self.OBSERVE+2:
+        if remaining < self.RESPONSE+self.OBSERVE+1.5:
             return None
+        self.proposal = self.decision_context(sample, remaining, candidates)
+        self.state = "DECIDING"
+        return None
+
+    def decision_context(self, sample: Sample, remaining: float, candidates=None) -> DecisionContext:
         recent = [s for s in self.history if sample.t-self.BASELINE <= s.t <= sample.t]
         quality = [s.sqi for s in recent if s.sqi is not None]
         half = len(quality)//2
         self.sequence += 1
-        self.proposal = DecisionContext(
-            proposal_id=self.sequence, sample_at=sample.t, camera=observations(sample), issues=detected,
+        return DecisionContext(
+            proposal_id=self.sequence, sample_at=sample.t, camera=observations(sample), issues=issues(sample),
             sqi=sample.sqi, sqi_trend=mean(quality[half:])-mean(quality[:half]) if half else None,
-            usable_fraction=mean(s.usable for s in recent), candidates=candidates,
+            usable_fraction=mean(s.usable for s in recent),
+            candidates=self.candidates(sample) if candidates is None else candidates,
             outcomes=list(self.memory.records), remaining_seconds=remaining,
+            deadline_seconds=1.5,
         )
-        self.state = "DECIDING"
-        return None
 
     def resolve(self, proposal_id: int, result: DecisionResult, sample: Sample, remaining: float):
         proposal = self.proposal
@@ -165,6 +170,8 @@ class MeasurementCoach:
         if any(i in issues(sample) for i in ("face", "cadence")):
             return None
         decision = result.decision
+        if sample.t-proposal.sample_at > self.FRESHNESS:
+            result = DecisionResult(status="timeout")
         if result.status == "selected" and decision is not None:
             from .agents import validate_decision
 

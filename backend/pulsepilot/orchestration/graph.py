@@ -30,6 +30,11 @@ class Provider(Protocol):
 def build_graphs(provider: Provider):
     async def generate(state: AgentState):
         event = state["event"]
+        if not event.ai_consent:
+            return {"proposal": None, "status": "not_requested", "model_latency_ms": 0.0}
+        if isinstance(event, CoachEvent) and any(c.action_id in ("face", "cadence")
+                                               for c in event.context.candidates):
+            return {"proposal": None, "status": "safety", "model_latency_ms": 0.0}
         started = time.perf_counter()
         try:
             if isinstance(event, CoachEvent):

@@ -11,6 +11,8 @@ from test_sensing import good_sample
 from pulsepilot import agents
 from pulsepilot.app import app
 from pulsepilot.coaching import MeasurementCoach
+from pulsepilot.orchestration.contracts import AnalysisProposal, CoachProposal
+from pulsepilot.orchestration.provider import MetaProvider
 from pulsepilot.reports import build_report
 from pulsepilot.schemas import (
     DECISION_EXPLANATIONS,
@@ -291,14 +293,19 @@ def test_websocket_closed_loop_continues_samples_during_model_requests(monkeypat
 
     contexts = []
 
-    async def fake(schema, payload, instruction):
-        if schema is AgentDecision:
+    monkeypatch.setenv("AGENT_MODE", "adaptive")
+
+    async def fake(schema, payload, instruction, **kwargs):
+        if schema is CoachProposal:
             contexts.append(payload["context"])
             await asyncio.sleep(.15)
-            return decision("motion" if len(contexts) == 1 else "dark",
-                            "persistent_issue" if len(contexts) == 1 else "try_alternative")
-        return ReportInterpretation(**{
-            section: [c for c in payload["claims"] if c["section"] == section][:4]
+            choice = decision("motion" if len(contexts) == 1 else "dark",
+                              "persistent_issue" if len(contexts) == 1 else "try_alternative")
+            return CoachProposal(session_id=payload["session_id"], event_id=payload["event_id"],
+                                 issue_id=choice.action_id, **choice.model_dump())
+        return AnalysisProposal(session_id=payload["session_id"], event_id=payload["event_id"], **{
+            section: [{k: c[k] for k in ("claim_id", "claim_type", "evidence_id")}
+                      for c in payload["claims"] if c["section"] == section][:4]
             for section in ReportInterpretation.model_fields
         })
 
@@ -333,7 +340,7 @@ def test_no_decision_requests_without_ai_consent_or_meta_mode(monkeypatch, conse
     import pulsepilot.app as module
 
     mock = AsyncMock(side_effect=AssertionError("Unexpected decision request"))
-    monkeypatch.setattr(agents.SensingDecisionAgent, "decide", mock)
+    monkeypatch.setattr(MetaProvider, "propose", mock)
     monkeypatch.setattr(agents, "configured", lambda: True)
     monkeypatch.setattr(agents, "analyze_report", AsyncMock(side_effect=lambda report: report))
     monkeypatch.setattr(module, "simulated_sample", lambda t, gate: bad(t))
@@ -354,20 +361,23 @@ def test_no_decision_requests_without_ai_consent_or_meta_mode(monkeypatch, conse
 def test_finishing_or_disconnecting_cancels_pending_decision_and_restart_is_clean(monkeypatch):
     import pulsepilot.app as module
 
-    cancelled = threading.Event()
+    started, cancelled = threading.Event(), threading.Event()
 
     async def slow(*args):
+        started.set()
         try:
             await asyncio.Future()
         finally:
             cancelled.set()
 
-    monkeypatch.setattr(agents.SensingDecisionAgent, "decide", slow)
+    monkeypatch.setenv("AGENT_MODE", "adaptive")
+    monkeypatch.setattr(MetaProvider, "propose", slow)
     monkeypatch.setattr(agents, "configured", lambda: True)
     monkeypatch.setattr(agents, "analyze_report", AsyncMock(side_effect=lambda report: report))
     monkeypatch.setattr(module, "simulated_sample", lambda t, gate: bad(t))
     with TestClient(app) as client:
         for finish in (True, False):
+            started.clear()
             cancelled.clear()
             with client.websocket_connect("/ws/measure", headers={"origin": "http://localhost:3000"}) as ws:
                 ws.send_json({"mode": "simulation", "ai_consent": True, "coaching": "meta"})
@@ -376,6 +386,7 @@ def test_finishing_or_disconnecting_cancels_pending_decision_and_restart_is_clea
                     if message.get("coaching_state") == "DECIDING":
                         break
                 assert message["interventions"] == []
+                assert started.wait(2)
                 if finish:
                     ws.send_json({"type": "finish"})
                     assert ws.receive_json()["report"]["interventions"] == []

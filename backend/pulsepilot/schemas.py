@@ -98,7 +98,7 @@ class DecisionContext(StrictModel):
     candidates: list[CandidateAction]
     outcomes: list[OutcomeRecord]
     remaining_seconds: float
-    deadline_seconds: float = 2.0
+    deadline_seconds: float = 1.5
 
 
 class AgentDecision(StrictModel):
@@ -131,6 +131,10 @@ class Intervention(StrictModel):
     decision_source: Literal["rules", "muse"] = "rules"
     explanation_source: Literal["rules", "muse"] = "rules"
     decision_status: str = "rules"
+    agent_event_id: str | None = None
+    graph_version: str | None = None
+    model_latency_ms: float | None = None
+    graph_latency_ms: float | None = None
     before_camera: dict[str, float] = Field(default_factory=dict)
     after_camera: dict[str, float] = Field(default_factory=dict)
     environmental_changes: dict[str, float] = Field(default_factory=dict)
@@ -207,3 +211,5 @@ class Report(StrictModel):
     analyst: Literal["deterministic", "muse"] = "deterministic"
     ai_status: str = "not_configured"
     claims: list[GroundedClaim] = Field(default_factory=list)
+    agent_event_id: str | None = None
+    graph_version: str | None = None
