@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..schemas import (
     Analysis,
+    ClaimType,
     DecisionReason,
     GroundedClaim,
     OutcomeRecord,
@@ -129,6 +130,7 @@ class CoachProposal(Contract):
 class ClaimReference(Contract):
     claim_id: str = Field(min_length=1, max_length=80)
     evidence_id: str = Field(min_length=1, max_length=80)
+    claim_type: ClaimType
 
 
 class AnalysisProposal(Contract):

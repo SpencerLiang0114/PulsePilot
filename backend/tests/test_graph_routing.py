@@ -19,7 +19,7 @@ class FakeProvider:
 
     async def analyze(self, event):
         return AnalysisProposal(session_id=event.session_id, event_id=event.event_id, **{
-            section: [ClaimReference(claim_id=c.claim_id, evidence_id=c.evidence_id)
+            section: [ClaimReference(claim_id=c.claim_id, evidence_id=c.evidence_id, claim_type=c.claim_type)
                       for c in event.bundle.claims if c.section == section][:4]
             for section in Analysis.model_fields
         })

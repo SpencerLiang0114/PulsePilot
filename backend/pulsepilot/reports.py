@@ -134,8 +134,15 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
             kind, metric, value = facts[ref]
             if item.kind == "limitation":
                 kind = "limitation"
+            claim_type = ("measurement_recommendation" if section == "recommendations" else
+                          "measurement_limitation" if ref == "limits" else
+                          "signal_available" if ref == "heart_rate" and accepted else
+                          "signal_unavailable" if ref == "heart_rate" else
+                          "accepted_estimate_trend" if ref == "trend" else
+                          f"intervention_{value}" if ref.startswith("intervention-") else
+                          "intervention_count" if ref == "interventions" else "quality_limitation")
             claims.append(GroundedClaim(
-                claim_id=f"{section}-{index}", section=section, kind=kind, evidence_id=ref,
+                claim_id=f"{section}-{index}", claim_type=claim_type, section=section, kind=kind, evidence_id=ref,
                 metric=metric, value=value, text=item.text, statement_kind=item.kind,
             ))
     return Report(

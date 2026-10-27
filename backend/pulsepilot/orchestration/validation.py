@@ -35,6 +35,7 @@ def validate_claims(event: ReportEvent, proposal: AnalysisProposal) -> Validatio
         for ref in selected:
             claim = catalogue.get(ref.claim_id)
             if (claim is None or claim.section != section or claim.evidence_id != ref.evidence_id
+                    or claim.claim_type != ref.claim_type
                     or ref.evidence_id not in event.bundle.evidence):
                 return ValidationResult(valid=False, reason="unsupported_claim")
     return ValidationResult(valid=True)

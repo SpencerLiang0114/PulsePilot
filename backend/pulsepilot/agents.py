@@ -29,7 +29,7 @@ def configured() -> bool:
     return bool(os.getenv("MODEL_API_KEY", "").strip())
 
 
-async def structured(schema: type[BaseModel], payload: dict, instruction: str):
+async def structured(schema: type[BaseModel], payload: dict, instruction: str, *, usage: dict | None = None):
     key = os.getenv("MODEL_API_KEY", "").strip()
     if not key:
         raise RuntimeError("Meta key is not configured")
@@ -65,7 +65,14 @@ async def structured(schema: type[BaseModel], payload: dict, instruction: str):
             },
         )
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        body = response.json()
+        if usage is not None:
+            counts = body.get("usage") or {}
+            for field in ("prompt_tokens", "completion_tokens"):
+                count = counts.get(field)
+                if type(count) is int and count >= 0:
+                    usage[field] = count
+        content = body["choices"][0]["message"]["content"]
         return schema.model_validate_json(content)
 
 

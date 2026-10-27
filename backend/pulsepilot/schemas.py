@@ -149,8 +149,17 @@ class Analysis(StrictModel):
     recommendations: list[Statement] = Field(min_length=1, max_length=4)
 
 
+ClaimType = Literal[
+    "signal_available", "signal_unavailable", "mean_bpm_observed", "accepted_estimate_trend",
+    "tracking_continuity", "quality_limitation", "measurement_limitation", "measurement_recommendation",
+    "intervention_improved", "intervention_unchanged", "intervention_worsened", "intervention_inconclusive",
+    "intervention_observing", "intervention_count",
+]
+
+
 class GroundedClaim(StrictModel):
     claim_id: str
+    claim_type: ClaimType
     section: Literal["summary", "quality", "interventions", "recommendations"]
     kind: Literal["measurement", "quality", "outcome", "limitation"]
     statement_kind: Literal["fact", "possible explanation", "limitation"]
