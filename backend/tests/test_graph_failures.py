@@ -26,7 +26,7 @@ async def test_duplicates_and_cross_session_results_are_discarded():
 
 
 async def test_expired_and_future_events_do_not_call_graph():
-    for issued_at in (time.monotonic()-2, time.monotonic()+100):
+    for issued_at in (time.monotonic()-module.ADAPTIVE_DEADLINE-1, time.monotonic()+100):
         event = coach_event(issued_at=issued_at)
         runner = service(event)
         assert (await runner.run_coach_event(event)).status == "stale_event"
@@ -34,7 +34,7 @@ async def test_expired_and_future_events_do_not_call_graph():
 
 
 async def test_deadline_cancels_provider_and_uses_deterministic_fallback(monkeypatch):
-    monkeypatch.setattr(module, "COACH_DEADLINE", .03)
+    monkeypatch.setattr(module, "ADAPTIVE_DEADLINE", .03)
     started, cancelled = asyncio.Event(), asyncio.Event()
 
     class Slow(FakeProvider):
@@ -138,3 +138,21 @@ async def test_service_rejects_selection_when_mode_does_not_allow_it(mode):
     runner = service(event, mode=mode)
     assert (await runner.run_coach_event(event)).status == "mode_restricted"
     assert runner._graphs is None
+
+
+async def test_explanation_retains_shorter_budget(monkeypatch):
+    monkeypatch.setattr(module, "COACH_DEADLINE", .03)
+    event = coach_event()
+    context = event.context.model_copy(update={"candidates": event.context.candidates[:1],
+                                              "intervention_id": "intervention-1"})
+    event = event.model_copy(update={"purpose": "explain", "context": context})
+
+    class Slow(FakeProvider):
+        async def propose(self, event):
+            await asyncio.sleep(.1)
+            return await super().propose(event)
+
+    runner = OrchestrationService(session_id=event.session_id, mode="assist", ai_consent=True, provider=Slow())
+    result = await runner.run_coach_event(event)
+    assert result.status == "timeout" and result.action.source == "rules"
+    await runner.close()

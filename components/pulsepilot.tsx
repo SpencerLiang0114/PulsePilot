@@ -104,7 +104,7 @@ export function PulsePilot() {
     { title: "Head movement", icon: Waves, value: !current || !current.camera.face_visible ? "Waiting" : current.camera.motion > .28 ? "Hold steady" : "Steady",
       good: current && current.camera.face_visible && current.camera.motion <= .28 },
   ];
-  const guideMessage = m.status === "connecting" ? m.message : m.coachingState === "DECIDING" && measuring ? "Choosing a useful adjustment…" : active?.action ??
+  const guideMessage = m.status === "connecting" ? m.message : m.coachingState === "DECIDING" && measuring ? "Choosing a useful adjustment… Measurement continues." : active?.action ??
     (current?.usable ? "Your signal is settling in. Keep this comfortable position." :
       measuring ? "Face the camera and hold still while we find your pulse signal." :
         "Good measurements start with a comfortable setup.");
@@ -132,7 +132,7 @@ export function PulsePilot() {
             <button className="service-indicator" onClick={() => void m.refreshHealth()} title="Refresh service status"><span className={m.health ? "online" : ""} />{m.health ? m.health.model_ready ? "Inference ready" : "Service connected" : "Service offline"}<RotateCcw size={12} /></button>
           </div>
           {m.error && <div className="error-banner" role="alert"><div><strong>Let’s get you connected.</strong><p>{m.error}</p></div><button className="secondary small" onClick={() => startSetup(m.mode)}>Try again</button></div>}
-          {m.mode === "simulation" && busy && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulation · 4× playback</strong> Synthetic values to explore the experience. No camera or physiological measurement.</div>}
+          {m.mode === "simulation" && busy && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulation · {m.playbackRate}× playback</strong> Synthetic values to explore the experience. No camera or physiological measurement.</div>}
           <div className="measurement-grid">
             <div className="capture-column">
               <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
@@ -181,7 +181,7 @@ export function PulsePilot() {
               </div>
               {busy && <div className="session-progress" role="progressbar" aria-label="Measurement progress" aria-valuenow={Math.round(current?.t ?? 0)} aria-valuemin={0} aria-valuemax={m.duration}><span style={{ width: `${Math.min(100, (current?.t ?? m.history.at(-1)?.t ?? 0) / m.duration * 100)}%` }} /></div>}
               {!liveVideo && <section className="waveform-panel"><div className="section-heading"><h3><Waves size={17} />Your pulse waveform</h3><span>{current?.waveform.length ? "BVP · normalized" : "Waiting for signal"}</span></div>
-                <PulseWaveform sample={current} active={measuring} simulation={m.mode === "simulation"} label="Live FacePhys blood volume pulse waveform" />
+                <PulseWaveform sample={current} active={measuring} playbackRate={m.playbackRate} label="Live FacePhys blood volume pulse waveform" />
                 <div className="waveform-footer"><span>Recent 8 seconds</span><span><span className={`mini-dot ${current?.usable ? "good" : ""}`} />{current?.state ?? "Ready when you are"}</span></div>
               </section>}
             </div>

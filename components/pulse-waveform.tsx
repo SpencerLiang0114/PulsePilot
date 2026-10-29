@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Sample } from "@/lib/types";
 
-export function PulseWaveform({ sample, active, simulation = false, label }: {
-  sample: Sample | null; active: boolean; simulation?: boolean; label: string;
+export function PulseWaveform({ sample, active, playbackRate = 1, label }: {
+  sample: Sample | null; active: boolean; playbackRate?: number; label: string;
 }) {
   const clip = useId().replace(/:/g, "");
   const container = useRef<HTMLDivElement>(null);
@@ -23,12 +23,12 @@ export function PulseWaveform({ sample, active, simulation = false, label }: {
     let frame = 0;
     const tick = () => {
       const elapsed = animate ? Math.min((performance.now() - received) / 1000, .75) : 0;
-      setClock(sampleTime + elapsed * (simulation ? 4 : 1));
+      setClock(sampleTime + elapsed * playbackRate);
       if (animate && elapsed < .75) frame = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(frame);
-  }, [sampleTime, active, simulation]);
+  }, [sampleTime, active, playbackRate]);
 
   const values = sample?.waveform ?? [];
   const times = sample?.waveform_times ?? [];

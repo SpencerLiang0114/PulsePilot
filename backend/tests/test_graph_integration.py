@@ -24,7 +24,7 @@ def test_websocket_modes_preserve_or_change_only_authorized_outputs(monkeypatch,
 
     async def propose(self, event):
         proposed.append(event)
-        await asyncio.sleep(.15)
+        await asyncio.sleep(.65 if mode == "adaptive" else .15)
         choice = await fake.propose(event)
         # assist only offers the deterministic committed action.
         action = event.context.candidates[0].action_id if mode == "assist" else "motion"
@@ -49,6 +49,7 @@ def test_websocket_modes_preserve_or_change_only_authorized_outputs(monkeypatch,
         ws.send_json({"mode": "simulation", "duration": 30, "coaching": "meta", "ai_consent": True})
         ready = ws.receive_json()
         assert ready["agent_mode"] == mode
+        assert ready["playback_rate"] == (1 if mode == "adaptive" else 4)
         samples, reports = [], []
         while True:
             message = ws.receive_json()
@@ -168,3 +169,58 @@ def test_camera_frames_and_acks_continue_while_agent_is_pending(monkeypatch):
         assert ws.receive_json()["report"]["interventions"] == []
         assert cancelled.wait(2)
         assert not client.get("/health").json()["busy"]
+
+
+def test_face_loss_between_samples_cancels_pending_selection(monkeypatch):
+    from test_protocol import frame_packet
+
+    import pulsepilot.app as module
+
+    started, cancelled = threading.Event(), threading.Event()
+    monkeypatch.setenv("AGENT_MODE", "adaptive")
+    monkeypatch.setattr(agents, "configured", lambda: True)
+
+    class Estimator:
+        start_time = None
+
+        def __init__(self):
+            self.camera = bad(0).camera
+
+        def start(self): pass
+
+        def push(self, rgb, timestamp):
+            if self.start_time is None:
+                self.start_time = timestamp
+            self.t = timestamp-self.start_time
+            self.camera.face_visible = self.t < 5.1
+
+        def snapshot(self): return bad(self.t)
+
+        def heatmap(self): return None
+
+        def close(self): pass
+
+    async def slow(self, event):
+        started.set()
+        try:
+            await asyncio.Future()
+        finally:
+            cancelled.set()
+
+    monkeypatch.setattr(module, "FacePhysEstimator", Estimator)
+    monkeypatch.setattr(MetaProvider, "propose", slow)
+    with TestClient(app) as client, client.websocket_connect(
+        "/ws/measure", headers={"origin": "http://localhost:3000"}
+    ) as ws:
+        ws.send_json({"mode": "camera", "frame_consent": True, "ai_consent": True})
+        assert ws.receive_json()["type"] == "status"
+        assert ws.receive_json()["type"] == "ready"
+        for t in [i*.5 for i in range(11)]+[5.1]:
+            ws.send_bytes(frame_packet(t))
+            while ws.receive_json()["type"] != "ack":
+                pass
+            if t == 5:
+                assert started.wait(2)
+        assert cancelled.wait(2)
+        ws.send_json({"type": "finish"})
+        assert ws.receive_json()["report"]["interventions"] == []

@@ -80,9 +80,9 @@ Without consent, a key, network access, or a valid response, deterministic sensi
 
 `OrchestrationService.run_coach_event(event)` and `run_report_event(event)` return typed `GraphOutcome` values. The service rejects cross-session, duplicate, future, and expired events, bounds its seen-event registry to 512, and keeps at most 256 safe telemetry records. A completed measurement rejects future coach events while allowing its final report event. Closing the session cancels and drains every running event. Cancellation propagates through the graph, HTTP task, and client; it does not become a fallback result.
 
-The complete coaching graph has a **1.5-second application deadline**, including compilation and validation. The provider independently has a ten-second invocation timeout; the reused HTTP client has twelve-second total/four-second connection network limits. Report execution has a twelve-second application deadline. These are separate limits. No model task acquires the FacePhys inference lock.
+P3 extends adaptive selection to a **six-second application deadline**, including compilation and validation. Explanation and observation graphs retain a **1.5-second deadline**. The provider independently has a ten-second invocation timeout; the session-scoped HTTP client has twelve-second total/four-second connection network limits. Report execution has a twelve-second application deadline. These are separate limits. No model task acquires the FacePhys inference lock.
 
-Only the WebSocket sample handler applies results. It matches the live proposal or committed intervention, rechecks current eligibility, fresh samples, safety conditions, session duration, and absence of an active overlapping action. A model proposal more than 1.5 capture-timeline seconds old falls back to the current rules candidate. Sample gaps, face loss, finish, and disconnect invalidate pending selection. Explanation enrichment must match the same still-active action within its three-second response window. Observe results never change the coach. Graph completion itself cannot send an instruction or mutate statistics.
+Only the WebSocket sample handler applies results. It matches the live proposal or committed intervention, rechecks current eligibility, fresh samples, safety conditions, session duration, and absence of an active overlapping action. A pending adaptive proposal reaching six capture-timeline seconds falls back to the current eligible rules candidate. Sample gaps still invalidate context after 1.5 seconds; the longer planning budget does not relax sample freshness. Material changes in an offered action’s triggering metrics discard its context. Sample gaps, face loss, finish, and disconnect invalidate pending selection. Explanation enrichment must match the same still-active action within its three-second response window. Observe results never change the coach. Graph completion itself cannot send an instruction or mutate statistics.
 
 The coach preserves five seconds of persistence/baseline, three seconds for user response, a disjoint five-second post window, and eight seconds of cooldown. Intervention timing begins at actual commitment. Each comparison requires at least eight samples spanning 3.5 seconds and eight nonmissing SQI values. A SQI change of at least 0.08 classifies improved/worsened; missing or interrupted observations are inconclusive. Current candidates and up to six measured outcomes guide subsequent choices. There is no persistent user profile or model training.
 
@@ -110,7 +110,7 @@ RUN_FACEPHYS_INTEGRATION=1 uv run pytest -q tests/test_facephys_integration.py
 uv run python ../scripts/smoke_facephys.py
 uv run python ../scripts/evaluate_p2.py --seed 27 --repetitions 3 --output ../docs/p2-evaluation.json
 # Explicit opt-in real Meta calls with synthetic metrics only:
-uv run python ../scripts/verify_sensing_agent.py --live --output ../docs/p2-live-verification.json
+uv run python ../scripts/verify_sensing_agent.py --live --trials 20 --output ../docs/p3-live-verification.json
 ```
 
 From the root, run `pnpm check`, `pnpm build`, and `pnpm test:e2e` with both services running. `PULSEPILOT_TEST_URL` can select a separate frontend. Unit tests clear live credentials by default; live verification is separate.
@@ -125,3 +125,5 @@ Observed results are stored in [p2-evaluation.json](p2-evaluation.json) and [p2-
 - Backend, TypeScript, production build, and browser verification results are recorded in [verification.md](verification.md#p2-langgraph-verification).
 
 P2 Core (M1–M4) is verified within the defined automated/local scope. P2 Extended (M5) is implemented and fixture-verified, but only partially empirically verified: live coaching selection did not meet the initial latency budget in this run, and human benefit, physical-camera performance, controlled less-than-five-percent inference-throughput regression, reference HR accuracy, Docker execution, and durable deployment remain unverified. Increased SQI never establishes increased HR accuracy. No persistent health history or infrastructure was added.
+
+P3 supersedes the original live-selection timing limitation; see [the P3 implementation and verification record](p3-live-decisions.md). The P2 results above remain historical evidence under their original budget.

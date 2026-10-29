@@ -127,7 +127,9 @@ async def measurement(ws: WebSocket):
             await run_inference(estimator.start)
             model_status.update(ready=True, error=None)
             initializing = False
+        playback_rate = 1 if config.mode != "simulation" or coach.mode == "meta" else 4
         await send({"type": "ready", "mode": config.mode, "ai_status": ai_status,
+                    "playback_rate": playback_rate,
                     "agent_mode": orchestration.mode, "session_id": orchestration.session_id})
         gate = ReliabilityGate()
         target = config.duration
@@ -171,7 +173,7 @@ async def measurement(ws: WebSocket):
             if coach.proposal is not None and decision_task is None:
                 decision_proposal_id = coach.proposal.proposal_id
                 event = orchestration.coach_event(coach.proposal, "select")
-            elif (committed is not None and orchestration.mode != "off" and config.coaching == "meta"
+            elif (committed is not None and orchestration.mode in ("assist", "observe") and config.coaching == "meta"
                   and decision_task is None
                   and (orchestration.mode == "observe" or committed.issue not in ("face", "cadence"))):
                 candidates = coach.candidates(sample)
@@ -192,7 +194,7 @@ async def measurement(ws: WebSocket):
 
         while time.monotonic()-wall_started < SESSION_TIMEOUT:
             try:
-                message = await asyncio.wait_for(ws.receive(), 0.125 if config.mode == "simulation" else FRAME_TIMEOUT)
+                message = await asyncio.wait_for(ws.receive(), .5/playback_rate if config.mode == "simulation" else FRAME_TIMEOUT)
             except TimeoutError:
                 if config.mode != "simulation":
                     raise ValueError("No camera frames arrived for fifteen seconds. Restart measurement.")

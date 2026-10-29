@@ -166,6 +166,7 @@ class ModelUsage(Contract):
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
     requests: int = Field(default=0, ge=0)
+    responses: int = Field(default=0, ge=0)
 
 
 class GraphOutcome(Contract):

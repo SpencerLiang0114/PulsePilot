@@ -44,7 +44,7 @@ def build_graphs(provider: Provider):
                 output = await provider.analyze(event)
                 proposal = AnalysisProposal.model_validate(output.model_dump())
             update = {"proposal": proposal, "status": "selected"}
-        except TimeoutError:
+        except (TimeoutError, httpx.TimeoutException):
             update = {"proposal": None, "status": "timeout"}
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):
             update = {"proposal": None, "status": "invalid"}

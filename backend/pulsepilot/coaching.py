@@ -11,6 +11,15 @@ from .schemas import (
     Sample,
 )
 from .sensing import candidate_actions, issues, observations
+from .timing import ADAPTIVE_DEADLINE
+
+METRIC_TOLERANCES = {"brightness": 10, "light_imbalance": 10, "light_change": 10,
+                     "roll_degrees": 5, "fps": 3}
+
+
+def conditions_changed(previous, current):
+    return any(key in previous and abs(float(value)-previous[key]) > METRIC_TOLERANCES.get(key, .1)
+               for key, value in current.items())
 
 
 class OutcomeMemory:
@@ -42,10 +51,7 @@ class OutcomeMemory:
             if previous is None or candidate.issue in ("face", "cadence"):
                 eligible.append(candidate)
                 continue
-            tolerances = {"brightness": 10, "light_imbalance": 10, "light_change": 10,
-                          "roll_degrees": 5, "fps": 3}
-            changed = any(key in previous and abs(float(value)-previous[key]) > tolerances.get(key, .1)
-                          for key, value in candidate.observations.items())
+            changed = conditions_changed(previous, candidate.observations)
             if changed:
                 eligible.append(candidate)
         latest = {record.action_id: record.outcome for record in self.records}
@@ -127,6 +133,13 @@ class MeasurementCoach:
             ):
                 self.proposal = None
                 self.state = "MONITORING"
+            elif any(conditions_changed(p.observations, c.observations)
+                     for p in self.proposal.candidates for c in candidates if p.action_id == c.action_id):
+                self.proposal = None
+                self.state = "MONITORING"
+                return None
+            elif sample.t-self.proposal.sample_at >= self.proposal.deadline_seconds:
+                return self.resolve(self.proposal.proposal_id, DecisionResult(status="timeout"), sample, remaining)
             else:
                 return None
         self.state = "MONITORING"
@@ -135,7 +148,7 @@ class MeasurementCoach:
         if self.mode != "meta" or candidates[0].issue in ("face", "cadence"):
             status = "safety" if candidates[0].issue in ("face", "cadence") else self.rule_status
             return self._commit(candidates[0], sample, "rules", status)
-        if remaining < self.RESPONSE+self.OBSERVE+1.5:
+        if remaining < self.RESPONSE+self.OBSERVE+ADAPTIVE_DEADLINE:
             return None
         self.proposal = self.decision_context(sample, remaining, candidates)
         self.state = "DECIDING"
@@ -152,7 +165,7 @@ class MeasurementCoach:
             usable_fraction=mean(s.usable for s in recent),
             candidates=self.candidates(sample) if candidates is None else candidates,
             outcomes=list(self.memory.records), remaining_seconds=remaining,
-            deadline_seconds=1.5,
+            deadline_seconds=ADAPTIVE_DEADLINE,
         )
 
     def resolve(self, proposal_id: int, result: DecisionResult, sample: Sample, remaining: float):
@@ -170,7 +183,7 @@ class MeasurementCoach:
         if any(i in issues(sample) for i in ("face", "cadence")):
             return None
         decision = result.decision
-        if sample.t-proposal.sample_at > self.FRESHNESS:
+        if sample.t-proposal.sample_at >= proposal.deadline_seconds:
             result = DecisionResult(status="timeout")
         if result.status == "selected" and decision is not None:
             from .agents import validate_decision

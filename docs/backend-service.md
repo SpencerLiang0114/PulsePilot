@@ -63,7 +63,7 @@ Supported JSON commands after readiness:
 
 Malformed commands or frames produce an `error` and close the session. Fifteen seconds without a message ends a real session with an error; the measurement loop has a 240-second wall-clock bound. Capture duration also ends the session automatically. Disconnects and failures release capacity. Cancellation waits for in-flight model work before closing workers; it cannot forcibly terminate a stuck native call. Initialization and inference run off the event loop so health requests remain responsive.
 
-P2 adds `agent_mode` to `/health` and `ready`, plus an ephemeral session ID to `ready`. Existing event names and commands are preserved. `OrchestrationService` runs event-scoped coaching/report graphs asynchronously with strict identities, consent gates, a 1.5-second coaching deadline, and final coach-controlled eligibility/commitment. See [the P2 guide](langgraph-p2.md) for contracts and all four modes.
+P2 adds `agent_mode` to `/health` and `ready`, plus an ephemeral session ID to `ready`. Existing event names and commands are preserved. `OrchestrationService` runs event-scoped coaching/report graphs asynchronously with strict identities, consent gates, a six-second adaptive selection deadline (1.5 seconds for explanations/observation), and final coach-controlled eligibility/commitment. See [the P2 guide](langgraph-p2.md) for contracts and all four modes.
 
 ## Verification
 
@@ -78,3 +78,5 @@ RUN_FACEPHYS_INTEGRATION=1 uv run pytest -q tests/test_facephys_integration.py
 The default suite uses controlled estimator fixtures for lifecycle tests. The opt-in test loads the actual checkpoint, sends 330 synthetic PNG frames at nominal 30 Hz through the WebSocket handler, finishes a report, and starts a fresh recording session. It requires fetched weights and takes longer because of JAX compilation. The standalone smoke script also exercises the frozen model directly and checks finite BVP output.
 
 With frontend and backend running, `pnpm test:e2e tests/experience.spec.ts --grep 'recording runs|real FacePhys'` exercises browser capture/recording transport and cleanup. All generated-frame checks must suppress BPM for blank images. They verify execution and transport, not a human heart-rate measurement. See [verification](verification.md) for recorded results.
+
+P3 adds `playback_rate` to `ready`: adaptive simulation with consent and a configured provider runs at 1× so wall-clock planning and capture-timeline expiry agree. Other simulations remain at 4×. The waveform and banner use this reported rate. Provider HTTP connections are session-scoped and close after pending tasks are canceled/drained; measurement finish keeps the client available for the optional report. See [P3 verification](p3-live-decisions.md).

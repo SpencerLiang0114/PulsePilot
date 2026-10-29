@@ -43,7 +43,7 @@ test("live decisions wait for commitment and report timeline preserves provenanc
     send = value => socket.send(JSON.stringify(value));
     socket.onMessage(message => {
       if (typeof message === "string" && JSON.parse(message).type === "start") {
-        send!({ type: "ready", ai_status: "ready" });
+        send!({ type: "ready", ai_status: "ready", playback_rate: 1 });
         send!({ type: "sample", sample, interventions: [], coaching_state: "DECIDING" });
       }
     });
@@ -52,7 +52,8 @@ test("live decisions wait for commitment and report timeline preserves provenanc
   await page.getByRole("button", { name: "Explore the demo" }).click();
   await page.getByLabel("Let Muse Spark").check();
   await page.getByRole("button", { name: "Start simulated session" }).click();
-  await expect(page.getByText("Choosing a useful adjustment…")).toBeVisible();
+  await expect(page.getByText("Simulation · 1× playback")).toBeVisible();
+  await expect(page.getByText("Choosing a useful adjustment… Measurement continues.")).toBeVisible();
   await expect(page.getByText(intervention.action, { exact: true })).toHaveCount(0);
   send!({ type: "sample", sample: { ...sample, t: 5.5 }, interventions: [intervention], coaching_state: "ACTING" });
   await expect(page.getByText("Muse Spark decision", { exact: true })).toBeVisible();

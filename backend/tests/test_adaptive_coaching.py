@@ -49,10 +49,11 @@ async def test_proposal_from_another_session_cannot_be_accepted():
 
 def test_capture_timeline_expiry_uses_current_rules_not_late_model_selection():
     coach, context = proposal()
-    for t in (5.5, 6, 6.5, 7):
+    for t in (5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5):
         coach.update(bad(t))
-    item = coach.resolve(context.proposal_id, DecisionResult(status="selected", decision=decision()),
-                         coach.history[-1], 100)
+    item = coach.update(bad(11), 100)
+    assert coach.resolve(context.proposal_id, DecisionResult(status="selected", decision=decision()),
+                         coach.history[-1], 100) is None
     assert item.action_id == "dark" and item.decision_status == "fallback_timeout"
 
 
@@ -101,3 +102,55 @@ def test_prior_history_is_bounded_and_inconclusive_never_suppresses_retry():
     assert len(coach.memory.records) == 6
     assert all(r.outcome == "inconclusive" for r in coach.memory.records)
     assert coach.memory.unsuccessful == {}
+
+
+async def test_delayed_valid_selection_survives_old_deadline_with_continuous_samples():
+    import asyncio
+
+    class Delayed(FakeProvider):
+        async def propose(self, event):
+            await asyncio.sleep(1.7)
+            return await super().propose(event)
+
+    coach, context = proposal()
+    service = OrchestrationService(mode="adaptive", ai_consent=True, provider=Delayed())
+    task = asyncio.create_task(service.run_coach_event(service.coach_event(context, "select")))
+    try:
+        for t in (5.5, 6, 6.5, 7):
+            await asyncio.sleep(.5)
+            sample = bad(t)
+            coach.update(sample)
+        outcome = await task
+        item = coach.resolve(context.proposal_id, as_decision(outcome), sample, 100)
+        assert outcome.route == "accepted" and item.decision_source == "muse"
+        assert item.started_at == 7 and item.before_sqi == .3
+    finally:
+        await service.close()
+
+
+@pytest.mark.parametrize("change", ["brightness", "motion", "remaining", "cadence"])
+def test_planning_result_cannot_commit_after_material_context_change(change):
+    coach, context = proposal()
+    sample = bad(5.5)
+    remaining = 100
+    if change == "brightness":
+        sample.camera.brightness = 40  # Still dark, but no longer the requested conditions.
+    elif change == "motion":
+        sample.camera.motion = .8  # Still eligible; context nevertheless changed.
+    elif change == "cadence":
+        sample.fps = 10
+    else:
+        remaining = 7
+    coach.update(sample, remaining)
+    assert coach.resolve(context.proposal_id, DecisionResult(status="selected", decision=decision()),
+                         sample, remaining) is None
+    assert not coach.interventions
+
+
+def test_sampling_gap_still_invalidates_proposal_with_longer_planning_window():
+    coach, context = proposal()
+    sample = bad(7)
+    coach.update(sample)
+    assert coach.resolve(context.proposal_id, DecisionResult(status="selected", decision=decision()),
+                         sample, 100) is None
+    assert not coach.interventions and coach.proposal is None

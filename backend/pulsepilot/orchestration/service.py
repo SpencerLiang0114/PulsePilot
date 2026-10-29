@@ -6,6 +6,7 @@ from uuid import uuid4
 from langsmith import tracing_context
 
 from ..schemas import DECISION_EXPLANATIONS, AgentDecision, DecisionContext, DecisionResult, Report
+from ..timing import ADAPTIVE_DEADLINE, COACH_DEADLINE
 from .contracts import (
     AgentMode,
     CoachEvent,
@@ -19,7 +20,6 @@ from .provider import MetaProvider, invocation_usage, read_usage
 from .telemetry import Telemetry
 from .tools import get_quality_context, get_report_evidence
 
-COACH_DEADLINE = 1.5
 REPORT_DEADLINE = 12.0
 
 
@@ -67,7 +67,8 @@ class OrchestrationService:
         if self.mode not in ("off", "observe", "assist", "adaptive"):
             raise ValueError("Unknown agent mode")
         self.ai_consent = ai_consent
-        self.provider = provider or MetaProvider()
+        self._owns_provider = provider is None
+        self.provider = provider if provider is not None else MetaProvider()
         self.telemetry = Telemetry()
         self._graphs = None
         self._seen: set[str] = set()
@@ -90,7 +91,7 @@ class OrchestrationService:
         )
 
     async def run_coach_event(self, event: CoachEvent) -> GraphOutcome:
-        return await self._run(event, 0, COACH_DEADLINE)
+        return await self._run(event, 0, ADAPTIVE_DEADLINE if event.purpose == "select" else COACH_DEADLINE)
 
     async def run_report_event(self, event: ReportEvent) -> GraphOutcome:
         return await self._run(event, 1, REPORT_DEADLINE)
@@ -162,3 +163,5 @@ class OrchestrationService:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        if self._owns_provider:
+            await self.provider.close()

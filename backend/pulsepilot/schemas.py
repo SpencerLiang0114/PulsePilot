@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictStr
 
+from .timing import ADAPTIVE_DEADLINE
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
@@ -98,7 +100,7 @@ class DecisionContext(StrictModel):
     candidates: list[CandidateAction]
     outcomes: list[OutcomeRecord]
     remaining_seconds: float
-    deadline_seconds: float = 1.5
+    deadline_seconds: float = ADAPTIVE_DEADLINE
 
 
 class AgentDecision(StrictModel):

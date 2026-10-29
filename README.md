@@ -68,7 +68,7 @@ The boundaries are explicit:
 
 - **Sensing and reliability:** FacePhys estimates the pulse signal; deterministic checks decide which heart-rate windows are usable. The model cannot alter thresholds or measurements.
 - **Intervention control:** MeasurementCoach commits instructions and owns the five-second baseline, three-second response interval, five-second observation window, and eight-second cooldown. Outcomes use measured pre/post quality and may be inconclusive.
-- **Agent orchestration:** Typed event graphs request an eligible action or an explanation, validate identity and applicability, and return a result. Coaching has a 1.5-second application deadline with deterministic fallback. Late, duplicate, and stale decisions cannot replace an active instruction.
+- **Agent orchestration:** Typed event graphs request an eligible action or an explanation, validate identity and applicability, and return a result. Adaptive selection has a six-second planning deadline; explanations and observation retain a 1.5-second deadline, with deterministic fallback. Late, duplicate, and stale decisions cannot replace an active instruction.
 - **Reporting:** The server computes statistics and a canonical claim catalogue. Muse can select compatible claim references; the server renders their factual text. The numerical report arrives before optional AI analysis.
 
 One real inference session runs per backend process, with separate temporal state for every connection. Session-local outcome history is bounded; there is no persistent user memory or database. See the [P2 implementation guide](docs/langgraph-p2.md) for graph diagrams, contracts, routing, validation, cancellation, and telemetry.

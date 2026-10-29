@@ -26,7 +26,7 @@ Use a single long-running inference process initially, with one active real sess
 
 Camera metrics are sampled alongside inference; live summaries are emitted at 2 Hz. Browser transport scales the source proportionally to fit 320×240 before lossless PNG encoding; FacePhys retains its own original face detection/cropping and 36×36 model preprocessing. Frames are decoded in a worker thread. Slow Meta requests run as independent tasks and never hold the frame-processing loop. Origin allowlisting, message-size limits, a finite session duration, and a single-session capacity limit bound the public demo.
 
-The orchestration service owns event identities and bounded execution per WebSocket. It runs only quality/coaching/report events, never per-frame inference. `off` skips graphs; `observe` collects diagnostics; default `assist` enriches rules-selected actions; explicit `adaptive` permits eligible action selection before commitment. Separate AI consent gates every remote request. Coaching has a 1.5-second application deadline; the coach revalidates every asynchronous result. Numerical reports arrive after inference resources are released, ahead of optional analysis. Disconnect cancels pending analysis. Local telemetry excludes measurement payloads and external tracing is disabled.
+The orchestration service owns event identities and bounded execution per WebSocket. It runs only quality/coaching/report events, never per-frame inference. `off` skips graphs; `observe` collects diagnostics; default `assist` enriches rules-selected actions; explicit `adaptive` permits eligible action selection before commitment. Separate AI consent gates every remote request. Adaptive selection has a six-second planning deadline; explanation/observation graphs retain 1.5 seconds; the coach revalidates every asynchronous result. Numerical reports arrive after inference resources are released, ahead of optional analysis. Disconnect cancels pending analysis. Local telemetry excludes measurement payloads and external tracing is disabled.
 
 ## Privacy
 
@@ -41,7 +41,7 @@ The start dialog explicitly explains that frames leave the browser for the confi
 | Local Next.js + local inference, both through one HTTPS tunnel | Short hackathon demonstration | Laptop must remain awake; tunnel URL is temporary; capacity is one measurement |
 | HTTPS frontend + plain localhost backend | Local development only | Mixed-content/private-network restrictions vary; do not promise public compatibility |
 
-The [P2 verification record](verification.md#p2-langgraph-verification) distinguishes fixture, checkpoint, browser, and live-provider checks. In the recorded live P2 run, coaching requests used deadline fallback and the final Muse report validated. Timely live adaptive selection, persistent hosting, and human-camera validation remain unverified. The application retains deterministic measurements and reports when optional services are unavailable.
+The [P2 verification record](verification.md#p2-langgraph-verification) distinguishes fixture, checkpoint, browser, and live-provider checks. In the recorded live P2 run, coaching requests used deadline fallback and the final Muse report validated. [P3 verification](p3-live-decisions.md) establishes repeated live selections over synthetic metrics within a six-second budget. Persistent hosting and human-camera validation remain unverified. The application retains deterministic measurements and reports when optional services are unavailable.
 
 ## Repository
 

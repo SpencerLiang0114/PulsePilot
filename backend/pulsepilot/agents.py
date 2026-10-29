@@ -15,6 +15,7 @@ from .schemas import (
     ReportInterpretation,
     Statement,
 )
+from .timing import ADAPTIVE_DEADLINE
 
 META_URL = "https://api.meta.ai/v1/chat/completions"
 SYSTEM = """You interpret webcam rPPG measurement conditions, not cardiovascular health.
@@ -29,51 +30,57 @@ def configured() -> bool:
     return bool(os.getenv("MODEL_API_KEY", "").strip())
 
 
-async def structured(schema: type[BaseModel], payload: dict, instruction: str, *, usage: dict | None = None):
+async def structured(schema: type[BaseModel], payload: dict, instruction: str, *, usage: dict | None = None,
+                     client: httpx.AsyncClient | None = None):
     key = os.getenv("MODEL_API_KEY", "").strip()
     if not key:
         raise RuntimeError("Meta key is not configured")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=4.0)) as client:
-        wire_schema = schema.model_json_schema()
+    if client is None:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=4.0)) as owned:
+            return await structured(schema, payload, instruction, usage=usage, client=owned)
+    wire_schema = schema.model_json_schema()
 
-        def require_fields(node):
-            if isinstance(node, dict):
-                node.pop("default", None)
-                if "properties" in node:
-                    node["required"] = list(node["properties"])
-                for value in node.values():
-                    require_fields(value)
-            elif isinstance(node, list):
-                for value in node:
-                    require_fields(value)
+    def require_fields(node):
+        if isinstance(node, dict):
+            node.pop("default", None)
+            node.pop("title", None)
+            if "properties" in node:
+                node["required"] = list(node["properties"])
+            for value in node.values():
+                require_fields(value)
+        elif isinstance(node, list):
+            for value in node:
+                require_fields(value)
 
-        require_fields(wire_schema)
-        response = await client.post(
-            META_URL,
-            headers={"Authorization": f"Bearer {key}"},
-            json={
-                "model": os.getenv("META_MODEL", "muse-spark-1.3"),
-                "reasoning_effort": "minimal",
-                "messages": [
-                    {"role": "system", "content": SYSTEM + "\n" + instruction},
-                    {"role": "user", "content": json.dumps(payload, allow_nan=False)},
-                ],
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {"name": schema.__name__, "strict": True, "schema": wire_schema},
-                },
+    require_fields(wire_schema)
+    response = await client.post(
+        META_URL,
+        headers={"Authorization": f"Bearer {key}"},
+        json={
+            "model": os.getenv("META_MODEL", "muse-spark-1.3"),
+            "reasoning_effort": "minimal",
+            "messages": [
+                {"role": "system", "content": SYSTEM + "\n" + instruction},
+                {"role": "user", "content": json.dumps(payload, allow_nan=False, separators=(",", ":"))},
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": schema.__name__, "strict": True, "schema": wire_schema},
             },
-        )
-        response.raise_for_status()
-        body = response.json()
-        if usage is not None:
-            counts = body.get("usage") or {}
-            for field in ("prompt_tokens", "completion_tokens"):
-                count = counts.get(field)
-                if type(count) is int and count >= 0:
-                    usage[field] = count
-        content = body["choices"][0]["message"]["content"]
-        return schema.model_validate_json(content)
+        },
+    )
+    if usage is not None:
+        usage["responses"] = usage.get("responses", 0)+1
+    response.raise_for_status()
+    body = response.json()
+    if usage is not None:
+        counts = body.get("usage") or {}
+        for field in ("prompt_tokens", "completion_tokens"):
+            count = counts.get(field)
+            if type(count) is int and count >= 0:
+                usage[field] = count
+    content = body["choices"][0]["message"]["content"]
+    return schema.model_validate_json(content)
 
 
 def validate_decision(decision: AgentDecision, context: DecisionContext) -> bool:
@@ -90,7 +97,7 @@ def validate_decision(decision: AgentDecision, context: DecisionContext) -> bool
 
 
 class SensingDecisionAgent:
-    DEADLINE = 1.5
+    DEADLINE = ADAPTIVE_DEADLINE
 
     async def decide(self, context: DecisionContext) -> DecisionResult:
         try:
@@ -107,7 +114,7 @@ class SensingDecisionAgent:
             if not validate_decision(decision, context):
                 return DecisionResult(status="invalid")
             return DecisionResult(status="selected", decision=decision)
-        except TimeoutError:
+        except (TimeoutError, httpx.TimeoutException):
             return DecisionResult(status="timeout")
         except (ValueError, KeyError, IndexError, TypeError):
             return DecisionResult(status="invalid")

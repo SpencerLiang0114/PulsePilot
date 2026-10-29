@@ -3,6 +3,8 @@ import asyncio
 import os
 from contextvars import ContextVar
 
+import httpx
+
 from .. import agents
 from ..schemas import DECISION_EXPLANATIONS
 from .contracts import AnalysisProposal, CoachEvent, CoachProposal, ModelUsage, ReportEvent
@@ -13,6 +15,13 @@ invocation_usage: ContextVar[dict | None] = ContextVar("invocation_usage", defau
 
 class MetaProvider:
     TIMEOUT = 10.0  # Network timeout is independently set by the HTTP adapter.
+
+    def __init__(self):
+        self._client = None
+
+    async def close(self):
+        if self._client is not None:
+            await self._client.aclose()
 
     @property
     def identifier(self):
@@ -26,8 +35,10 @@ class MetaProvider:
         usage = invocation_usage.get()
         if usage is not None:
             usage["requests"] += 1
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=4.0))
         return await asyncio.wait_for(
-            agents.structured(schema, payload, instruction, usage=usage), timeout=self.TIMEOUT,
+            agents.structured(schema, payload, instruction, usage=usage, client=self._client), timeout=self.TIMEOUT,
         )
 
     async def propose(self, event: CoachEvent) -> CoachProposal:
@@ -52,4 +63,4 @@ class MetaProvider:
 
 def read_usage(values: dict) -> ModelUsage:
     return ModelUsage(input_tokens=values.get("prompt_tokens"), output_tokens=values.get("completion_tokens"),
-                      requests=values["requests"])
+                      requests=values["requests"], responses=values.get("responses", 0))

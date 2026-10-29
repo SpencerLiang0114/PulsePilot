@@ -23,6 +23,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
   const [status, setStatus] = useState<"idle" | "connecting" | "measuring" | "finishing" | "complete" | "error">("idle");
   const [mode, setMode] = useState<Mode>("camera");
   const [duration, setDuration] = useState(60);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [sample, setSample] = useState<Sample | null>(null);
   const [camera, setCamera] = useState<CameraMetrics | null>(null);
   const [heatmap, setHeatmap] = useState<FaceHeatmap | null>(null);
@@ -245,6 +246,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
           case "ready":
             window.clearTimeout(connectionTimeout);
             setAiStatus(payload.ai_status);
+            setPlaybackRate(payload.playback_rate === 1 ? 1 : options.mode === "simulation" ? 4 : 1);
             setStatus("measuring");
             statusRef.current = "measuring";
             await beginCapture();
@@ -295,6 +297,6 @@ export function useMeasurement(onReport: (report: Report) => void) {
     };
   }, [cancel, finish, releaseCamera, stopWatchdog]);
 
-  return { videoRef, status, mode, duration, sample, camera, heatmap, history, interventions, error, message, health,
+  return { videoRef, status, mode, duration, playbackRate, sample, camera, heatmap, history, interventions, error, message, health,
     aiStatus, captureSize, coachingState, coachingMode, start, finish, extend, cancel, refreshHealth };
 }

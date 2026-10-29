@@ -298,7 +298,7 @@ def test_websocket_closed_loop_continues_samples_during_model_requests(monkeypat
     async def fake(schema, payload, instruction, **kwargs):
         if schema is CoachProposal:
             contexts.append(payload["context"])
-            await asyncio.sleep(.15)
+            await asyncio.sleep(.65)
             choice = decision("motion" if len(contexts) == 1 else "dark",
                               "persistent_issue" if len(contexts) == 1 else "try_alternative")
             return CoachProposal(session_id=payload["session_id"], event_id=payload["event_id"],

@@ -1,5 +1,6 @@
 import asyncio
 
+import httpx
 import pytest
 from test_graph_state import coach_event, report_event
 
@@ -45,7 +46,8 @@ async def test_noop_skips_provider():
 
 
 @pytest.mark.parametrize("error,status", [(ValueError("malformed"), "invalid"),
-                                          (TimeoutError(), "timeout"), (RuntimeError("offline"), "unavailable")])
+                                          (TimeoutError(), "timeout"), (httpx.ReadTimeout("slow"), "timeout"),
+                                          (RuntimeError("offline"), "unavailable")])
 async def test_error_routes_to_deterministic_fallback(error, status):
     class Failed(FakeProvider):
         async def propose(self, event):
