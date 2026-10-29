@@ -18,6 +18,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from . import agents
 from .coaching import MeasurementCoach
 from .estimator import FacePhysEstimator, weights_available
+from .health_guidance import render_health_bundle
 from .orchestration.service import OrchestrationService, as_decision, configured_mode
 from .reports import build_report
 from .schemas import SessionCommand, SessionConfig
@@ -102,7 +103,7 @@ async def measurement(ws: WebSocket):
         config = SessionConfig.model_validate(await asyncio.wait_for(ws.receive_json(), 10))
         if config.mode != "simulation" and not config.frame_consent:
             raise ValueError("Consent to sending frames to the inference service is required.")
-        orchestration = OrchestrationService(ai_consent=config.ai_consent)
+        orchestration = OrchestrationService(ai_consent=config.ai_consent, health_ai_consent=config.health_ai_consent)
         if orchestration.mode == "off":
             ai_status = "disabled"
         elif config.ai_consent and agents.configured():
@@ -257,27 +258,51 @@ async def measurement(ws: WebSocket):
         report.agent_telemetry = orchestration.telemetry.snapshot()
         report_visible = orchestration.mode in ("assist", "adaptive") and ai_status == "ready"
         report.ai_status = "pending" if report_visible else "observed" if ai_status == "ready" else ai_status
+        health_event = orchestration.health_insight_event(report)
+        health_requested = config.health_ai_consent and orchestration.mode != "off"
+        health_visible = health_requested and orchestration.mode in ("assist", "adaptive")
+        report.health_insights = render_health_bundle(health_event.evidence,
+            status="pending" if health_visible else "not_requested", event_id=health_event.event_id)
         await send({"type": "report", "report": report.model_dump()})
-        if ai_status == "ready":
+
+        async def publish_analysis():
             event = orchestration.report_event(report)
-            analysis_task = asyncio.create_task(orchestration.run_report_event(event))
-            disconnect_task = asyncio.create_task(ws.receive())
-            pending.update((analysis_task, disconnect_task))
-            done, _ = await asyncio.wait((analysis_task, disconnect_task), return_when=asyncio.FIRST_COMPLETED)
-            if disconnect_task in done:
-                return
-            disconnect_task.cancel()
-            await asyncio.gather(disconnect_task, return_exceptions=True)
-            outcome = analysis_task.result()
-            if report_visible:
+            outcome = await orchestration.run_report_event(event)
+            if report_visible and outcome.route != "discarded":
                 if outcome.route == "accepted":
-                    report = report.model_copy(update={"analysis": outcome.analysis, "analyst": "muse",
-                                                        "ai_status": "complete"})
+                    report.analysis, report.analyst, report.ai_status = outcome.analysis, "muse", "complete"
                 else:
                     report.ai_status = "unavailable"
                 report.agent_event_id, report.graph_version = outcome.event_id, outcome.graph_version
                 report.agent_telemetry = orchestration.telemetry.snapshot()
                 await send({"type": "report", "report": report.model_dump()})
+
+        async def publish_health():
+            outcome = await orchestration.run_health_insight_event(health_event)
+            if (health_visible and outcome.route != "discarded" and outcome.health_insights is not None
+                    and outcome.health_insights.report_id == report.id and outcome.event_id == health_event.event_id):
+                report.health_insights = outcome.health_insights
+                await send({"type": "health_insight", "session_id": orchestration.session_id,
+                            "report_id": report.id, "event_id": outcome.event_id,
+                            "health_insights": outcome.health_insights.model_dump()})
+
+        report_tasks = set()
+        if ai_status == "ready":
+            report_tasks.add(asyncio.create_task(publish_analysis()))
+        if health_requested:
+            report_tasks.add(asyncio.create_task(publish_health()))
+        if report_tasks:
+            disconnect_task = asyncio.create_task(ws.receive())
+            pending.update(report_tasks | {disconnect_task})
+            while report_tasks:
+                done, _ = await asyncio.wait(report_tasks | {disconnect_task}, return_when=asyncio.FIRST_COMPLETED)
+                if disconnect_task in done:
+                    return
+                for task in done:
+                    task.result()
+                    report_tasks.remove(task)
+            disconnect_task.cancel()
+            await asyncio.gather(disconnect_task, return_exceptions=True)
     except WebSocketDisconnect:
         pass
     except (TimeoutError, ValueError, ValidationError, RuntimeError) as exc:

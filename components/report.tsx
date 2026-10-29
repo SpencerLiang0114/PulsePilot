@@ -2,7 +2,30 @@
 
 import { ArrowLeft, Download, Printer, CircleCheck, FlaskConical } from "lucide-react";
 import { Chart } from "./chart";
-import { Analysis, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
+import { Analysis, HealthInsightBundle, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
+
+function HealthInsights({ bundle }: { bundle: HealthInsightBundle | null | undefined }) {
+  if (!bundle) return <section className="panel"><h2>Health Insights</h2><p>Health Insights are unavailable for this report.</p></section>;
+  return <section aria-label="Health Insights" className="panel health-insights">
+    <h2>Health Insights</h2>
+    <p role="status">{bundle.status === "pending" ? "Muse Spark selection pending. Deterministic guidance is available below." :
+      bundle.status === "unavailable" ? "AI selection unavailable or stopped. Deterministic guidance remains available." :
+      bundle.status === "fallback" ? "Muse Spark could not provide a valid selection. Showing deterministic guidance." :
+      bundle.analyst === "muse" ? "AI-selected suggestions · server-authored and validated" : "Deterministic suggestions · Muse Spark was not used for the displayed guidance"}</p>
+    {!bundle.sufficient_evidence && <p><strong>Insufficient evidence for personal heart-rate interpretation.</strong></p>}
+    {[...bundle.insights, ...bundle.limitations].map(item => <article key={item.insight_id} className="statement">
+      <h3>{item.title}</h3><p>{item.text}</p>
+      <details open={item.insight_id === "urgent"}><summary>Why this appears · evidence &amp; guidance</summary>
+        {item.evidence_ids.length === 0 && <p>General wellness education; not inferred from your measurement.</p>}
+        {item.evidence_ids.map(id => <p key={id}>{bundle.evidence[id]}</p>)}
+        {item.guidance_reference_ids.map(id => {
+          const ref = bundle.guidance_references[id];
+          return ref && <p key={id}>{ref.url ? <a href={ref.url} target="_blank" rel="noreferrer">{ref.title}</a> : ref.title}</p>;
+        })}
+      </details>
+    </article>)}
+  </section>;
+}
 
 export function ReportView({ report, onBack, onNew }: { report: ReportData; onBack: () => void; onNew: () => void }) {
   const { stats } = report;
@@ -66,6 +89,7 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
           </details></div>)}
       </div>
     </section>)}</div>
+    <HealthInsights bundle={report.health_insights} />
     {report.interventions.length > 0 && <section className="panel intervention-report"><h3>Guidance & observed outcomes</h3>
       <p>Observed before/after comparisons do not establish causal benefit or heart-rate accuracy.</p>
       {report.interventions.map(item => <div className="intervention-row" key={item.id}><span>{clockText(item.started_at)}{item.evaluated_at != null && <>–{clockText(item.evaluated_at)}</>}</span><div><strong>{item.action}</strong><p>{decisionLabel(item)}</p><p>{item.before_sqi == null || item.after_sqi == null ? "Not enough comparable signal" : `Periodicity: ${percent(item.before_sqi)} → ${percent(item.after_sqi)}. Change: ${Math.round(item.delta! * 100)} percentage points.`}</p><p>Usable windows: {percent(item.before_usable)} → {percent(item.after_usable)}</p></div><span className={`outcome ${item.outcome}`}>{item.outcome}</span></div>)}

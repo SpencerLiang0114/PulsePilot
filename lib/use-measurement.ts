@@ -1,13 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { backendUrl, CameraMetrics, CaptureDiagnostics, CoachingMode, CoachingState, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
+import { backendUrl, CameraMetrics, CaptureDiagnostics, CoachingMode, CoachingState, FaceHeatmap, Health, HealthContext, Intervention, Mode, Report, Sample } from "./types";
 
-type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; coaching: CoachingMode; file?: File };
+type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; coaching: CoachingMode; healthAiConsent?: boolean; healthContext?: HealthContext; file?: File };
 
 const FRESHNESS_LIMIT_MS = 5000;
 const FRESHNESS_CHECK_MS = 250;
 const HEATMAP_FRESHNESS_MS = 1500;
+
+function settlePending(report: Report, status: "cancelled" | "unavailable"): Report {
+  return { ...report, ai_status: report.ai_status === "pending" ? status : report.ai_status,
+    health_insights: report.health_insights?.status === "pending"
+      ? { ...report.health_insights, status: "unavailable" } : report.health_insights };
+}
 
 export function useMeasurement(onReport: (report: Report) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -59,7 +65,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
 
   const cancel = useCallback(() => {
     if (pendingReport.current) {
-      onReportRef.current({ ...pendingReport.current, ai_status: "cancelled" });
+      onReportRef.current(settlePending(pendingReport.current, "cancelled"));
       pendingReport.current = null;
     }
     generation.current += 1;
@@ -114,6 +120,13 @@ export function useMeasurement(onReport: (report: Report) => void) {
     setCoachingMode(options.coaching);
     setMessage("Connecting to the measurement service…");
     let receivedReport = false;
+    let currentReport: Report | null = null;
+    let sessionId: string | null = null;
+    const publishReport = (report: Report) => {
+      currentReport = report;
+      pendingReport.current = report.ai_status === "pending" || report.health_insights?.status === "pending" ? report : null;
+      onReportRef.current(report);
+    };
     let inFlight = 0;
     let previousFrame = -1;
     let captureTimestamp = -1;
@@ -139,8 +152,17 @@ export function useMeasurement(onReport: (report: Report) => void) {
     let socket: WebSocket;
     const fail = (text: string) => {
       if (generation.current !== run) return;
+      if (pendingReport.current) {
+        onReportRef.current(settlePending(pendingReport.current, "unavailable"));
+        pendingReport.current = null;
+      }
       generation.current++;
       stopWatchdog();
+      if (receivedReport) {
+        releaseCamera();
+        socket?.close();
+        return;
+      }
       setError(text);
       setStatus("error");
       statusRef.current = "error";
@@ -178,6 +200,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
     }, 90000);
     socket.onopen = () => socket.send(JSON.stringify({
       type: "start", mode: options.mode, duration: options.duration,
+      health_ai_consent: options.healthAiConsent ?? false, health_context: options.healthContext,
       ai_consent: options.aiConsent, frame_consent: options.frameConsent, coaching: options.coaching,
     }));
     socket.onerror = () => fail("The measurement service is unavailable. Start the Python backend or check its connection, then retry.");
@@ -187,7 +210,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
       stopWatchdog();
       releaseCamera();
       if (pendingReport.current) {
-        onReportRef.current({ ...pendingReport.current, ai_status: "unavailable" });
+        onReportRef.current(settlePending(pendingReport.current, "unavailable"));
         pendingReport.current = null;
       }
       if (!receivedReport) fail("The connection ended before the report was ready. Please restart the measurement.");
@@ -271,6 +294,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
         switch (payload.type) {
           case "status": setMessage(payload.message); break;
           case "ready":
+            sessionId = payload.session_id ?? null;
             window.clearTimeout(connectionTimeout);
             diagnostics.initialization_ms = performance.now() - began;
             setAiStatus(payload.ai_status);
@@ -337,12 +361,25 @@ export function useMeasurement(onReport: (report: Report) => void) {
             stopWatchdog();
             if (options.mode !== "simulation") payload.report.capture_diagnostics = { ...diagnostics };
             receivedReport = true;
-            pendingReport.current = payload.report.ai_status === "pending" ? payload.report : null;
+            if (currentReport && currentReport.id !== payload.report.id) break;
+            // P2 may arrive after P3. Never overwrite a completed health result with its pending snapshot.
+            if (currentReport?.health_insights && currentReport.health_insights.status !== "pending")
+              payload.report.health_insights = currentReport.health_insights;
             releaseCamera();
             setStatus("complete");
             statusRef.current = "complete";
-            onReportRef.current(payload.report);
+            publishReport(payload.report);
             break;
+          case "health_insight": {
+            const bundle = payload.health_insights;
+            if (!currentReport || !sessionId || payload.session_id !== sessionId
+              || payload.report_id !== currentReport.id || bundle?.report_id !== currentReport.id
+              || currentReport.health_insights?.status !== "pending"
+              || payload.event_id !== currentReport.health_insights.agent_event_id
+              || bundle.agent_event_id !== payload.event_id || bundle.status === "pending") break;
+            publishReport({ ...currentReport, health_insights: bundle });
+            break;
+          }
           case "error": fail(payload.message); break;
         }
       } catch (err) {

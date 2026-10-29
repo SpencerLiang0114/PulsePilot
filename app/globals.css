@@ -291,3 +291,8 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .wave-cursor { stroke:#f16c60; stroke-dasharray:3 3; opacity:.8; }
 .camera-signal .pulse-waveform { color:#75e1cf; }
 .camera-signal .wave-label { fill:#c5d6d9; }
+
+.health-insights { margin-top:24px; }
+.health-insights > p { margin:12px 0; }
+.health-insights .statement { margin-top:20px; }
+.health-insights a { text-decoration:underline; text-underline-offset:3px; }

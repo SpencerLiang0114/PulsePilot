@@ -47,3 +47,27 @@ def render_analysis(event: ReportEvent, proposal: AnalysisProposal) -> Analysis:
         kind=catalogue[r.claim_id].statement_kind, text=catalogue[r.claim_id].text,
         evidence_ids=[catalogue[r.claim_id].evidence_id],
     ) for r in getattr(proposal, section)] for section in Analysis.model_fields})
+
+
+def validate_health_insights(event, proposal):
+    from ..health_guidance import HealthEvidenceGate
+    from .tools import get_health_guidance
+    if (proposal.session_id != event.session_id or proposal.event_id != event.event_id
+            or proposal.report_id != event.evidence.report_id):
+        return ValidationResult(valid=False, reason="identity_mismatch")
+    candidates = {c.insight_id: c for c in get_health_guidance(event.evidence)}
+    seen = set()
+    for ref in proposal.selections:
+        candidate = candidates.get(ref.guidance_id)
+        if candidate is None or ref.guidance_id in seen:
+            return ValidationResult(valid=False, reason="ineligible_guidance")
+        if (ref.evidence_ids != candidate.evidence_ids
+                or ref.guidance_reference_ids != candidate.guidance_reference_ids
+                or not set(ref.evidence_ids) <= set(event.evidence.evidence_ids)):
+            return ValidationResult(valid=False, reason="invalid_reference")
+        seen.add(ref.guidance_id)
+    required = "simulation" if event.evidence.source_kind == "simulation" else (
+        "estimate" if HealthEvidenceGate.assess(event.evidence) else "repeat")
+    if required not in seen or (event.evidence.concerning_symptoms and "urgent" not in seen):
+        return ValidationResult(valid=False, reason="missing_required_guidance")
+    return ValidationResult(valid=True)

@@ -43,6 +43,17 @@ export type CaptureDiagnostics = {
   sample_age_observations: number; mean_sample_frame_age_ms: number | null; max_sample_frame_age_ms: number | null;
   max_sample_gap_ms: number | null;
 };
+export type HealthContext = { activity: "resting" | "active" | "recovery" | "unknown"; concerning_symptoms: boolean };
+export type HealthInsight = {
+  insight_id: string; category: "measurement" | "education" | "wellness" | "follow_up" | "limitation";
+  title: string; text: string; priority: number; evidence_ids: string[]; guidance_reference_ids: string[];
+};
+export type HealthInsightBundle = {
+  report_id: string; status: "pending" | "complete" | "fallback" | "unavailable" | "not_requested";
+  analyst: "deterministic" | "muse"; insights: HealthInsight[]; limitations: HealthInsight[];
+  evidence: Record<string, string>; guidance_references: Record<string, { title: string; url: string | null }>;
+  sufficient_evidence: boolean; graph_version: string; agent_event_id: string | null;
+};
 export type Report = {
   id: string; created_at: string; mode: Mode; analyst: "deterministic" | "muse"; ai_status: string;
   stats: {
@@ -54,11 +65,13 @@ export type Report = {
   samples: Sample[]; interventions: Intervention[]; evidence: Record<string, string>; analysis: Analysis; claims: GroundedClaim[];
   agent_event_id?: string | null; graph_version?: string | null;
   agent_mode?: AgentMode | null;
-  agent_telemetry?: { event_id: string; session_id: string; event_type: "coach_request" | "report_request";
+  agent_telemetry?: { event_id: string; session_id: string; event_type: "coach_request" | "report_request" | "health_insight_request";
     graph_version: string; model_identifier: string | null; route: string; status: string;
     validation_result: boolean; fallback_reason: string | null; model_latency_ms: number; graph_latency_ms: number;
     api_requests: number; input_tokens: number | null; output_tokens: number | null }[];
   capture_diagnostics?: CaptureDiagnostics | null;
+  health_context?: HealthContext;
+  health_insights?: HealthInsightBundle | null;
 };
 export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean; agent_mode?: AgentMode };
 

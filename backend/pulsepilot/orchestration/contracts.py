@@ -7,6 +7,8 @@ from ..schemas import (
     ClaimType,
     DecisionReason,
     GroundedClaim,
+    HealthInsightBundle,
+    MeasurementEvidence,
     OutcomeRecord,
     Statistics,
 )
@@ -122,6 +124,25 @@ class ReportEvent(Event):
     bundle: EvidenceBundle
 
 
+class HealthInsightEvent(Event):
+    graph_version: Literal["p3.1"] = "p3.1"
+    event_type: Literal["health_insight_request"] = "health_insight_request"
+    evidence: MeasurementEvidence
+
+
+class HealthInsightReference(Contract):
+    guidance_id: str = Field(min_length=1, max_length=80)
+    evidence_ids: list[str] = Field(max_length=8)
+    guidance_reference_ids: list[str] = Field(min_length=1, max_length=4)
+
+
+class HealthInsightProposal(Contract):
+    session_id: Identity
+    event_id: Identity
+    report_id: Identity
+    selections: list[HealthInsightReference] = Field(min_length=1, max_length=3)
+
+
 class CoachProposal(Contract):
     session_id: Identity
     event_id: Identity
@@ -172,13 +193,14 @@ class ModelUsage(Contract):
 class GraphOutcome(Contract):
     session_id: Identity
     event_id: Identity
-    event_type: Literal["coach_request", "report_request"]
+    event_type: Literal["coach_request", "report_request", "health_insight_request"]
     graph_version: str = GRAPH_VERSION
     route: Literal["accepted", "fallback", "no_op", "discarded", "disabled"]
     status: str
     validation: ValidationResult
     action: ValidatedAction | None = None
     analysis: Analysis | None = None
+    health_insights: HealthInsightBundle | None = None
     model_latency_ms: float = 0.0
     graph_latency_ms: float = 0.0
     model_identifier: str | None = None

@@ -6,6 +6,7 @@ from .schemas import (
     Analysis,
     GroundedClaim,
     Intervention,
+    MeasurementEvidence,
     Report,
     Sample,
     SessionConfig,
@@ -151,9 +152,32 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
                 claim_id=f"{section}-{index}", claim_type=claim_type, section=section, kind=kind, evidence_id=ref,
                 metric=metric, value=value, text=item.text, statement_kind=item.kind,
             ))
-    return Report(
+    report = Report(
         id=str(uuid4()), created_at=datetime.now(UTC).isoformat(), mode=config.mode, stats=stats,
         samples=[s.model_copy(update={"waveform": [], "waveform_times": []}) for s in samples],
         interventions=[i.model_copy(deep=True) for i in interventions], evidence=evidence,
-        analysis=analysis, claims=claims,
+        analysis=analysis, claims=claims, health_context=config.health_context,
+    )
+
+    from .health_guidance import render_health_bundle
+    report.health_insights = render_health_bundle(measurement_evidence(report), status="not_requested")
+    return report
+
+
+def measurement_evidence(report: Report) -> MeasurementEvidence:
+    """Only called with the completed server report; there is no report-upload endpoint."""
+    stats = report.stats
+    warnings = tuple(name for name in ("lighting", "motion", "alignment")
+                     if getattr(stats, f"{name}_issue_fraction") > .1)
+    return MeasurementEvidence(
+        report_id=report.id, created_at=report.created_at,
+        source_kind={"camera": "camera_rppg", "recording": "recorded_rppg", "simulation": "simulation"}[report.mode],
+        device_name="PulsePilot FacePhys" if report.mode != "simulation" else "PulsePilot simulator",
+        measurement_method="camera remote photoplethysmography" if report.mode != "simulation" else "synthetic",
+        validation_status="unvalidated", **{key: getattr(stats, key) for key in (
+            "mean_bpm", "median_bpm", "min_bpm", "max_bpm", "sd_bpm", "usable_fraction", "signal_coverage", "duration")},
+        accepted_window_count=sum(s.usable and s.bpm is not None for s in report.samples),
+        quality_warnings=warnings, activity_context=report.health_context.activity,
+        concerning_symptoms=report.health_context.concerning_symptoms,
+        evidence_ids=("heart_rate", "quality", "source", "context", "symptoms"),
     )

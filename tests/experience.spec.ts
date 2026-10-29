@@ -119,7 +119,7 @@ test("real FacePhys accepts browser frames from a synthetic test camera and stop
   await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible({ timeout: 80000 });
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", /[2-9]|1[0-9]/, { timeout: 20000 });
-  await expect(page.getByText("Find your face", { exact: true })).toBeVisible();
+  await expect(page.locator(".measurement-state")).toHaveText("Find your face");
   await page.getByRole("button", { name: "Finish", exact: true }).click();
   await expect(page.getByText("Insufficient usable signal", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { testStream: MediaStream }).testStream.getTracks().every(t => t.readyState === "ended"))).toBe(true);

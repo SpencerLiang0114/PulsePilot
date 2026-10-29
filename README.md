@@ -86,6 +86,14 @@ Configure `AGENT_MODE` in `backend/.env` or the backend process environment:
 
 Each session independently chooses `passive`, `rules`, or `meta` coaching. Passive never produces instructions; rules never requests model coaching. Separately consented report analysis may still run in enabled modes. Adaptive action selection requires both `AGENT_MODE=adaptive` and the session's Meta preference and consent.
 
+## Health Insights
+
+Completed native reports include a separate Health Insights section with deterministic guidance, measurement evidence, sources, and accuracy limitations. Simulated or insufficient measurements do not produce personal heart-rate interpretations. Optional resting context is user-declared; symptom guidance is deterministic and appears before measurement as well as in reports.
+
+The separate **Allow Muse Spark to select Health Insights** checkbox authorizes transfer of accepted statistics, quality, provenance, and supplied activity/symptom context. Existing frame or coaching consent does not authorize this transfer. Muse can select only eligible server-authored guidance. Its independent 12-second workflow updates the matching report without delaying numerical results or P2 analysis. JSON export includes the bundle.
+
+See [Health Insights contracts, policy, and evaluation](docs/p3-health-insights.md). Clinical expert review, reference-device accuracy validation, and hardware report adapters remain outstanding.
+
 ## Checks and evaluation
 
 From the repository root:

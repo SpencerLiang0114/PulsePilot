@@ -9,12 +9,20 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
 
 
+class HealthContext(StrictModel):
+    model_config = ConfigDict(frozen=True)
+    activity: Literal["resting", "active", "recovery", "unknown"] = "unknown"
+    concerning_symptoms: bool = False
+
+
 class SessionConfig(StrictModel):
     type: Literal["start"] = "start"
     mode: Literal["camera", "recording", "simulation"] = "camera"
     duration: int = Field(default=60, ge=30, le=180)
     frame_consent: bool = False
     ai_consent: bool = False
+    health_ai_consent: bool = False
+    health_context: HealthContext = Field(default_factory=HealthContext)
     coaching: Literal["passive", "rules", "meta"] = "meta"
 
 
@@ -207,7 +215,7 @@ class Statistics(StrictModel):
 class AgentTrace(StrictModel):
     event_id: str
     session_id: str
-    event_type: Literal["coach_request", "report_request"]
+    event_type: Literal["coach_request", "report_request", "health_insight_request"]
     graph_version: str
     model_identifier: str | None
     route: str
@@ -240,6 +248,58 @@ class CaptureDiagnostics(StrictModel):
     max_sample_gap_ms: float | None = Field(ge=0)
 
 
+class MeasurementEvidence(StrictModel):
+    model_config = ConfigDict(frozen=True)
+    report_id: str
+    schema_version: Literal["1"] = "1"
+    created_at: str
+    source_kind: Literal["camera_rppg", "recorded_rppg", "simulation", "wearable_ppg", "ecg_reference", "unknown"]
+    device_name: str
+    measurement_method: str
+    validation_status: Literal["unvalidated", "reference_validated", "unknown"]
+    mean_bpm: float | None
+    median_bpm: float | None
+    min_bpm: float | None
+    max_bpm: float | None
+    sd_bpm: float | None
+    usable_fraction: float = Field(ge=0, le=1)
+    signal_coverage: float = Field(ge=0, le=1)
+    duration: float = Field(ge=0)
+    accepted_window_count: int = Field(ge=0)
+    quality_warnings: tuple[str, ...] = ()
+    activity_context: Literal["resting", "active", "recovery", "unknown"] = "unknown"
+    concerning_symptoms: bool = False
+    evidence_ids: tuple[str, ...]
+
+
+class GuidanceReference(StrictModel):
+    title: str
+    url: str | None = None
+
+
+class HealthInsight(StrictModel):
+    insight_id: str
+    category: Literal["measurement", "education", "wellness", "follow_up", "limitation"]
+    title: str
+    text: str
+    priority: int
+    evidence_ids: list[str]
+    guidance_reference_ids: list[str]
+
+
+class HealthInsightBundle(StrictModel):
+    report_id: str
+    status: Literal["pending", "complete", "fallback", "unavailable", "not_requested"]
+    analyst: Literal["deterministic", "muse"] = "deterministic"
+    insights: list[HealthInsight] = Field(max_length=3)
+    limitations: list[HealthInsight]
+    evidence: dict[str, str]
+    guidance_references: dict[str, GuidanceReference]
+    sufficient_evidence: bool
+    graph_version: str = "p3.1"
+    agent_event_id: str | None = None
+
+
 class Report(StrictModel):
     id: str
     created_at: str
@@ -257,3 +317,5 @@ class Report(StrictModel):
     agent_mode: Literal["off", "observe", "assist", "adaptive"] | None = None
     agent_telemetry: list[AgentTrace] = Field(default_factory=list, max_length=256)
     capture_diagnostics: CaptureDiagnostics | None = None
+    health_context: HealthContext = Field(default_factory=HealthContext)
+    health_insights: HealthInsightBundle | None = None

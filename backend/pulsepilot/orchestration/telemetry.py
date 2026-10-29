@@ -13,7 +13,7 @@ class Telemetry:
         self.records = deque(maxlen=256)
 
     def record(self, outcome: GraphOutcome):
-        item = outcome.model_dump(exclude={"action", "analysis"})
+        item = outcome.model_dump(exclude={"action", "analysis", "health_insights"})
         self.records.append(item)
         logging.getLogger("pulsepilot.agents").info("agent_event %s", json.dumps(item, allow_nan=False))
 

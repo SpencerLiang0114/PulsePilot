@@ -11,16 +11,19 @@ from .contracts import (
     AgentMode,
     CoachEvent,
     GraphOutcome,
+    HealthInsightEvent,
     ReportEvent,
     ValidatedAction,
     ValidationResult,
 )
 from .graph import build_graphs
+from .health_graph import build_health_graph, health_outcome
 from .provider import MetaProvider, invocation_usage, read_usage
 from .telemetry import Telemetry
-from .tools import get_quality_context, get_report_evidence
+from .tools import get_health_evidence, get_quality_context, get_report_evidence
 
 REPORT_DEADLINE = 12.0
+HEALTH_DEADLINE = 12.0
 
 
 def configured_mode() -> AgentMode:
@@ -30,7 +33,9 @@ def configured_mode() -> AgentMode:
     return value
 
 
-def fallback(event: CoachEvent | ReportEvent, status: str, route="fallback") -> GraphOutcome:
+def fallback(event: CoachEvent | ReportEvent | HealthInsightEvent, status: str, route="fallback") -> GraphOutcome:
+    if isinstance(event, HealthInsightEvent):
+        return health_outcome(event, status, route=route)
     action, analysis = None, None
     if route == "fallback":
         if isinstance(event, CoachEvent) and event.context.candidates:
@@ -61,16 +66,18 @@ def as_decision(outcome: GraphOutcome) -> DecisionResult:
 class OrchestrationService:
     """One service per WebSocket. Results never mutate the coach or send UI events."""
 
-    def __init__(self, *, session_id=None, mode: AgentMode | None = None, ai_consent=False, provider=None):
+    def __init__(self, *, session_id=None, mode: AgentMode | None = None, ai_consent=False, health_ai_consent=False, provider=None):
         self.session_id = session_id or str(uuid4())
         self.mode = mode if mode is not None else configured_mode()
         if self.mode not in ("off", "observe", "assist", "adaptive"):
             raise ValueError("Unknown agent mode")
         self.ai_consent = ai_consent
+        self.health_ai_consent = health_ai_consent
         self._owns_provider = provider is None
         self.provider = provider if provider is not None else MetaProvider()
         self.telemetry = Telemetry()
         self._graphs = None
+        self._health_graph = None
         self._seen: set[str] = set()
         self._running: dict[str, tuple[str, asyncio.Task]] = {}
         self.closed = False
@@ -89,6 +96,16 @@ class OrchestrationService:
             measurement_timestamp=report.stats.duration, ai_consent=self.ai_consent,
             bundle=get_report_evidence(report),
         )
+
+    def health_insight_event(self, report: Report):
+        return HealthInsightEvent(
+            session_id=self.session_id, event_id=str(uuid4()), issued_at=time.monotonic(),
+            measurement_timestamp=report.stats.duration, ai_consent=self.health_ai_consent,
+            evidence=get_health_evidence(report),
+        )
+
+    async def run_health_insight_event(self, event: HealthInsightEvent) -> GraphOutcome:
+        return await self._run(event, 2, HEALTH_DEADLINE)
 
     async def run_coach_event(self, event: CoachEvent) -> GraphOutcome:
         return await self._run(event, 0, ADAPTIVE_DEADLINE if event.purpose == "select" else COACH_DEADLINE)
@@ -116,7 +133,8 @@ class OrchestrationService:
             or (self.mode == "observe" and event.purpose != "observe")
         ):
             return fallback(event, "mode_restricted", "discarded")
-        event = event.model_copy(update={"ai_consent": self.ai_consent and event.ai_consent})
+        consent = self.health_ai_consent if isinstance(event, HealthInsightEvent) else self.ai_consent
+        event = event.model_copy(update={"ai_consent": consent and event.ai_consent})
         started = time.perf_counter()
         usage = {"requests": 0}
         token = invocation_usage.set(usage)
@@ -126,9 +144,15 @@ class OrchestrationService:
             with tracing_context(enabled=False):
                 try:
                     async with asyncio.timeout(deadline-age):
-                        if self._graphs is None:
-                            self._graphs = build_graphs(self.provider)
-                        state = await self._graphs[graph_index].ainvoke({"event": event})
+                        if graph_index == 2:
+                            if self._health_graph is None:
+                                self._health_graph = build_health_graph(self.provider)
+                            graph = self._health_graph
+                        else:
+                            if self._graphs is None:
+                                self._graphs = build_graphs(self.provider)
+                            graph = self._graphs[graph_index]
+                        state = await graph.ainvoke({"event": event})
                         outcome = state["outcome"]
                 except TimeoutError:
                     outcome = fallback(event, "timeout")
@@ -143,6 +167,8 @@ class OrchestrationService:
                 "model_latency_ms": outcome.model_latency_ms or (elapsed if usage["requests"] else 0.0),
             })
             self.telemetry.record(outcome)
+            if isinstance(event, HealthInsightEvent) and self.mode == "observe" and outcome.route != "discarded":
+                outcome = outcome.model_copy(update={"health_insights": health_outcome(event, "observed").health_insights})
             return outcome
         finally:
             self._running.pop(event.event_id, None)

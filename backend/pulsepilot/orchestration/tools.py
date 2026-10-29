@@ -32,3 +32,13 @@ def get_report_evidence(report: Report) -> EvidenceBundle:
         report_id=report.id, stats=report.stats.model_copy(deep=True), evidence=report.evidence.copy(),
         claims=[c.model_copy(deep=True) for c in report.claims], baseline=report.analysis.model_copy(deep=True),
     )
+
+
+def get_health_evidence(report):
+    from ..reports import measurement_evidence
+    return measurement_evidence(report)
+
+
+def get_health_guidance(evidence):
+    from ..health_guidance import HealthGuidanceCatalog
+    return HealthGuidanceCatalog.candidates(evidence)

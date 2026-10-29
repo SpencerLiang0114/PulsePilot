@@ -29,13 +29,16 @@ function FaceGuide({ active }: { active: boolean }) {
 }
 
 function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
-  mode: Mode; onClose: () => void; onStart: (duration: number, aiConsent: boolean, coaching: CoachingMode) => void;
+  mode: Mode; onClose: () => void; onStart: (duration: number, aiConsent: boolean, coaching: CoachingMode, healthAiConsent: boolean, resting: boolean, symptoms: boolean) => void;
   aiAvailable: boolean; fileName?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [duration, setDuration] = useState(60);
   const [consent, setConsent] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
+  const [healthAiConsent, setHealthAiConsent] = useState(false);
+  const [resting, setResting] = useState(false);
+  const [symptoms, setSymptoms] = useState(false);
   const [coaching, setCoaching] = useState<CoachingMode>("meta");
   useEffect(() => { dialogRef.current?.showModal(); }, []);
   return <dialog ref={dialogRef} className="setup-dialog" onCancel={onClose}>
@@ -57,7 +60,13 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
     </select>
     {mode !== "simulation" && <label className="check-label"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to send video frames to the inference service for this measurement.<small>Frames are processed in memory and discarded. Audio is never captured. Reports stay in this page until exported.</small></span></label>}
     <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark assist with guidance and interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images. Without consent, Muse mode uses rules." : "Available when a Meta API key is configured and agents are enabled. Deterministic guidance and reports work now."}</small></span></label>
-    <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent, coaching)}>
+    {mode !== "simulation" && <>
+      <label className="check-label"><input type="checkbox" checked={resting} onChange={e => setResting(e.target.checked)} /><span>This measurement is at rest: calm, seated or lying down, and not exercising.<small>Optional context; otherwise activity remains unknown.</small></span></label>
+      <label className="check-label"><input type="checkbox" checked={symptoms} onChange={e => setSymptoms(e.target.checked)} /><span>I am currently experiencing chest pain, severe shortness of breath, or fainting.</span></label>
+      {symptoms && <p role="alert">Seek emergency medical help now; call your local emergency number. Do not wait for a measurement or AI response. <a href="https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack" target="_blank" rel="noreferrer">American Heart Association guidance</a></p>}
+    </>}
+    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={healthAiConsent} disabled={!aiAvailable} onChange={e => setHealthAiConsent(e.target.checked)} /><span>Allow Muse Spark to select Health Insights for this report.<small>Separate consent: send accepted heart-rate statistics, signal quality, measurement source, and any activity or symptom context above to Meta. No images or saved health history. Without consent, Health Insights use deterministic guidance.</small></span></label>
+    <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent, coaching, healthAiConsent, resting, symptoms)}>
       {mode === "simulation" ? <Play size={17} /> : <Camera size={18} />}{mode === "simulation" ? "Start simulated session" : mode === "recording" ? "Process recording" : "Enable camera & start"}
     </button>
     <p className="dialog-footnote">For research and personal observation. Not a medical device.</p>
@@ -226,9 +235,10 @@ export function PulsePilot() {
       </main>
     </div>
     {setup && <ConsentDialog mode={setup} aiAvailable={!!m.health?.ai_configured && m.health.agent_mode !== "off"} fileName={setup === "recording" ? file?.name : undefined}
-      onClose={() => setSetup(null)} onStart={(duration, aiConsent, coaching) => {
+      onClose={() => setSetup(null)} onStart={(duration, aiConsent, coaching, healthAiConsent, resting, symptoms) => {
         const mode = setup; setSetup(null);
-        void m.start({ mode, duration, aiConsent, coaching, frameConsent: mode !== "simulation", file });
+        void m.start({ mode, duration, aiConsent, coaching, healthAiConsent,
+          healthContext: { activity: resting ? "resting" : "unknown", concerning_symptoms: symptoms }, frameConsent: mode !== "simulation", file });
       }} />}
   </div>;
 }
