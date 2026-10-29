@@ -64,6 +64,14 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
       {report.interventions.map(item => <div className="intervention-row" key={item.id}><span>{clockText(item.started_at)}{item.evaluated_at != null && <>–{clockText(item.evaluated_at)}</>}</span><div><strong>{item.action}</strong><p>{decisionLabel(item)}</p><p>{item.before_sqi == null || item.after_sqi == null ? "Not enough comparable signal" : `Periodicity: ${percent(item.before_sqi)} → ${percent(item.after_sqi)}. Change: ${Math.round(item.delta! * 100)} percentage points.`}</p><p>Usable windows: {percent(item.before_usable)} → {percent(item.after_usable)}</p></div><span className={`outcome ${item.outcome}`}>{item.outcome}</span></div>)}
     </section>}
     <div className="quality-detail"><span>Face tracking <strong>{percent(stats.tracking_fraction)}</strong></span><span>Mean capture rate <strong>{stats.mean_fps} fps</strong></span><span>Signal coverage <strong>{percent(stats.signal_coverage)}</strong></span></div>
+    {report.capture_diagnostics && <details className="panel">
+      <summary>Capture & delivery diagnostics</summary>
+      <p>{report.capture_diagnostics.width} × {report.capture_diagnostics.height} capture. Camera track reports {report.capture_diagnostics.track_fps?.toFixed(1) ?? "unavailable"} fps.</p>
+      <p>Observed video callbacks: {report.capture_diagnostics.callback_fps?.toFixed(1) ?? "—"} fps. Submitted frames: {report.capture_diagnostics.sent_fps?.toFixed(1) ?? "—"} fps. Server-processed capture: {stats.mean_fps} fps.</p>
+      <p>{report.capture_diagnostics.frames_acknowledged} / {report.capture_diagnostics.frames_sent} submitted frames acknowledged. Mean / maximum acknowledgement round trip: {report.capture_diagnostics.mean_ack_round_trip_ms?.toFixed(1) ?? "—"} / {report.capture_diagnostics.max_ack_round_trip_ms?.toFixed(1) ?? "—"} ms.</p>
+      <p>Mean / maximum sample frame age at receipt: {report.capture_diagnostics.mean_sample_frame_age_ms?.toFixed(1) ?? "—"} / {report.capture_diagnostics.max_sample_frame_age_ms?.toFixed(1) ?? "—"} ms. Maximum sample arrival gap: {report.capture_diagnostics.max_sample_gap_ms?.toFixed(1) ?? "—"} ms.</p>
+      <p>Browser observations measure callbacks and delivery, including encoding and server work. Camera settings are reported by the track. These are not model-only throughput or reference-device accuracy measurements. Per-sample server processing time and inference timeline lag are included in the JSON export.</p>
+    </details>}
     <footer className="report-footer"><p>Signal quality describes the measurement, not your health. Accuracy has not been verified against a reference device.</p><button className="primary" onClick={onNew}>Start a new measurement</button></footer>
   </div>;
 }

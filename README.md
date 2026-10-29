@@ -123,9 +123,10 @@ For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-i
 - [Frontend experience](docs/web-experience.md)
 - [Evaluation protocol](docs/evaluation.md)
 - [Verification results and remaining limits](docs/verification.md)
+- [P4 real-camera self-test and capture diagnostics](docs/p4-real-camera.md)
 
 ## Privacy and limits
 
 Video frames go to the configured inference service with consent and are discarded after processing. Muse receives only separately consented numerical summaries and intervention history; it never receives images. Reports stay in browser memory for the page session and can be exported as JSON or printed. External tracing is disabled.
 
-PulsePilot is a research application, not a medical device. Signal periodicity and before/after quality changes do not establish heart-rate accuracy or causal coaching benefit. Human-camera performance, synchronized reference accuracy, and durable hosting remain unverified. The pinned upstream source and checkpoint have distinct licensing considerations; see [FacePhys integration](docs/facephys-integration.md#licensing-limitation).
+PulsePilot is a research application, not a medical device. Signal periodicity and before/after quality changes do not establish heart-rate accuracy or causal coaching benefit. Real-camera validation is limited to the [three-session local self-test](docs/p4-real-camera.md); low-light robustness, synchronized reference accuracy, multi-user benefit, and durable hosting remain unverified. The pinned upstream source and checkpoint have distinct licensing considerations; see [FacePhys integration](docs/facephys-integration.md#licensing-limitation).

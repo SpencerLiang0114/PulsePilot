@@ -47,6 +47,8 @@ class Sample(StrictModel):
     state: str = "Measuring"
     fps: float = 0
     latency_ms: float = 0
+    processing_ms: float | None = None
+    inference_lag_ms: float | None = None
     camera: CameraMetrics = Field(default_factory=CameraMetrics)
     waveform: list[float] = Field(default_factory=list)
     waveform_times: list[float] = Field(default_factory=list)
@@ -218,6 +220,25 @@ class AgentTrace(StrictModel):
     output_tokens: int | None
 
 
+class CaptureDiagnostics(StrictModel):
+    # Browser observations attached locally to exported reports, never sent to Muse.
+    initialization_ms: float = Field(ge=0)
+    width: int = Field(ge=0)
+    height: int = Field(ge=0)
+    track_fps: float | None = Field(ge=0)
+    frame_callbacks: int = Field(ge=0)
+    frames_sent: int = Field(ge=0)
+    frames_acknowledged: int = Field(ge=0)
+    callback_fps: float | None = Field(ge=0)
+    sent_fps: float | None = Field(ge=0)
+    mean_ack_round_trip_ms: float | None = Field(ge=0)
+    max_ack_round_trip_ms: float | None = Field(ge=0)
+    sample_age_observations: int = Field(ge=0)
+    mean_sample_frame_age_ms: float | None = Field(ge=0)
+    max_sample_frame_age_ms: float | None = Field(ge=0)
+    max_sample_gap_ms: float | None = Field(ge=0)
+
+
 class Report(StrictModel):
     id: str
     created_at: str
@@ -234,3 +255,4 @@ class Report(StrictModel):
     graph_version: str | None = None
     agent_mode: Literal["off", "observe", "assist", "adaptive"] | None = None
     agent_telemetry: list[AgentTrace] = Field(default_factory=list, max_length=256)
+    capture_diagnostics: CaptureDiagnostics | None = None

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { backendUrl, CameraMetrics, CoachingMode, CoachingState, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
+import { backendUrl, CameraMetrics, CaptureDiagnostics, CoachingMode, CoachingState, FaceHeatmap, Health, Intervention, Mode, Report, Sample } from "./types";
 
 type StartOptions = { mode: Mode; duration: number; aiConsent: boolean; frameConsent: boolean; coaching: CoachingMode; file?: File };
 
@@ -122,6 +122,20 @@ export function useMeasurement(onReport: (report: Report) => void) {
     let lastCapture = performance.now();
     let lastAck = performance.now();
     let lastSample = performance.now();
+    const began = performance.now();
+    const diagnostics: CaptureDiagnostics = {
+      initialization_ms: 0, width: 0, height: 0, track_fps: null,
+      frame_callbacks: 0, frames_sent: 0, frames_acknowledged: 0, callback_fps: null, sent_fps: null,
+      mean_ack_round_trip_ms: null, max_ack_round_trip_ms: null,
+      sample_age_observations: 0, mean_sample_frame_age_ms: null, max_sample_frame_age_ms: null, max_sample_gap_ms: null,
+    };
+    const sentFrames: { timestamp: number; capturedAt: number; sentAt: number }[] = [];
+    let firstCapture: number | null = null;
+    let firstSent: number | null = null;
+    let lastSent = 0;
+    let ackTotal = 0;
+    let ageTotal = 0;
+    let sampleReceivedAt: number | null = null;
     let socket: WebSocket;
     const fail = (text: string) => {
       if (generation.current !== run) return;
@@ -195,14 +209,17 @@ export function useMeasurement(onReport: (report: Report) => void) {
           video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, max: 60 }, facingMode: "user" },
           audio: false,
         });
-        if (generation.current !== run) { stream.getTracks().forEach(track => track.stop()); return; }
+        if (generation.current !== run || statusRef.current !== "measuring") { stream.getTracks().forEach(track => track.stop()); return; }
         streamRef.current = stream;
+        diagnostics.track_fps = stream.getVideoTracks()[0].getSettings().frameRate ?? null;
         video.srcObject = stream;
         stream.getVideoTracks()[0].onended = () => fail("The camera was disconnected. Reconnect it and start again.");
       }
       await video.play();
       if (generation.current !== run || statusRef.current !== "measuring") return;
       setCaptureSize({ width: video.videoWidth, height: video.videoHeight });
+      diagnostics.width = video.videoWidth;
+      diagnostics.height = video.videoHeight;
       const canvas = document.createElement("canvas");
       const ratio = Math.min(320 / video.videoWidth, 240 / video.videoHeight, 1);
       canvas.width = Math.max(32, Math.round(video.videoWidth * ratio));
@@ -215,6 +232,9 @@ export function useMeasurement(onReport: (report: Report) => void) {
         if (timestamp > captureTimestamp) {
           captureTimestamp = timestamp;
           lastCapture = performance.now();
+          firstCapture ??= timestamp;
+          diagnostics.frame_callbacks++;
+          if (timestamp > firstCapture) diagnostics.callback_fps = (diagnostics.frame_callbacks - 1) / (timestamp - firstCapture);
         }
         if (inFlight < 4 && socket.bufferedAmount < 1_500_000 && timestamp > previousFrame && socket.readyState === WebSocket.OPEN) {
           previousFrame = timestamp;
@@ -228,7 +248,14 @@ export function useMeasurement(onReport: (report: Report) => void) {
           const packet = new Uint8Array(8 + image.byteLength);
           new DataView(packet.buffer).setFloat64(0, timestamp, true);
           packet.set(new Uint8Array(image), 8);
-          if (socket.readyState === WebSocket.OPEN) socket.send(packet);
+          if (socket.readyState === WebSocket.OPEN) {
+            firstSent ??= timestamp;
+            lastSent = timestamp;
+            sentFrames.push({ timestamp, capturedAt: lastCapture, sentAt: performance.now() });
+            diagnostics.frames_sent++;
+            if (lastSent > firstSent) diagnostics.sent_fps = (diagnostics.frames_sent - 1) / (lastSent - firstSent);
+            socket.send(packet);
+          }
         }
         if ("requestVideoFrameCallback" in video) video.requestVideoFrameCallback(capture);
         else requestAnimationFrame(capture);
@@ -245,19 +272,36 @@ export function useMeasurement(onReport: (report: Report) => void) {
           case "status": setMessage(payload.message); break;
           case "ready":
             window.clearTimeout(connectionTimeout);
+            diagnostics.initialization_ms = performance.now() - began;
             setAiStatus(payload.ai_status);
             setPlaybackRate(payload.playback_rate === 1 ? 1 : options.mode === "simulation" ? 4 : 1);
             setStatus("measuring");
             statusRef.current = "measuring";
             await beginCapture();
             break;
-          case "ack": inFlight = Math.max(0, inFlight - 1); lastAck = performance.now(); break;
+          case "ack": {
+            inFlight = Math.max(0, inFlight - 1);
+            lastAck = performance.now();
+            const frame = sentFrames.shift();
+            if (frame) {
+              const elapsed = lastAck - frame.sentAt;
+              diagnostics.frames_acknowledged++;
+              ackTotal += elapsed;
+              diagnostics.mean_ack_round_trip_ms = ackTotal / diagnostics.frames_acknowledged;
+              diagnostics.max_ack_round_trip_ms = Math.max(diagnostics.max_ack_round_trip_ms ?? 0, elapsed);
+            }
+            break;
+          }
           case "face_heatmap": {
             const timestamp = payload.t ?? payload.heatmap?.t;
             if (statusRef.current !== "measuring") break;
             if (payload.heatmap && (!Number.isFinite(timestamp) || timestamp <= heatmapTimestamp)) break;
             if (payload.heatmap) heatmapTimestamp = timestamp;
-            if (payload.camera) setCamera(payload.camera);
+            if (payload.camera) {
+              setCamera(payload.camera);
+              if (!payload.camera.face_visible || payload.camera.face_count !== 1)
+                setSample(current => current ? { ...current, bpm: null, usable: false, state: "Find your face", camera: payload.camera } : null);
+            }
             if (heatmapTimeout.current !== null) window.clearTimeout(heatmapTimeout.current);
             setHeatmap(payload.heatmap);
             heatmapTimeout.current = window.setTimeout(() => { setHeatmap(null); setCamera(null); }, HEATMAP_FRESHNESS_MS);
@@ -267,6 +311,17 @@ export function useMeasurement(onReport: (report: Report) => void) {
             if (statusRef.current !== "measuring" || !Number.isFinite(payload.sample.t) || payload.sample.t <= sampleTimestamp) break;
             sampleTimestamp = payload.sample.t;
             lastSample = performance.now();
+            if (sampleReceivedAt !== null) diagnostics.max_sample_gap_ms = Math.max(diagnostics.max_sample_gap_ms ?? 0, lastSample - sampleReceivedAt);
+            sampleReceivedAt = lastSample;
+            // Samples precede the ACK for their frame; timestamps are rounded to milliseconds by the server.
+            const frame = sentFrames.find(item => firstSent !== null && Math.abs(item.timestamp - firstSent - payload.sample.t) < .002);
+            if (frame) {
+              const age = lastSample - frame.capturedAt;
+              diagnostics.sample_age_observations++;
+              ageTotal += age;
+              diagnostics.mean_sample_frame_age_ms = ageTotal / diagnostics.sample_age_observations;
+              diagnostics.max_sample_frame_age_ms = Math.max(diagnostics.max_sample_frame_age_ms ?? 0, age);
+            }
             setSample(payload.sample);
             setHistory(current => [...current, payload.sample]);
             setInterventions(payload.interventions);
@@ -280,6 +335,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
           case "duration": setDuration(payload.duration); break;
           case "report":
             stopWatchdog();
+            if (options.mode !== "simulation") payload.report.capture_diagnostics = { ...diagnostics };
             receivedReport = true;
             pendingReport.current = payload.report.ai_status === "pending" ? payload.report : null;
             releaseCamera();

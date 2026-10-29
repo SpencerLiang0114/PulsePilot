@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { Sample } from "../lib/types";
+import { readFile } from "node:fs/promises";
+import type { Report, Sample } from "../lib/types";
 
 const accepted: Sample = {
   t: 0, bpm: 72, sqi: 0.9, usable: true, state: "Signal stable", fps: 30, latency_ms: 10,
@@ -13,9 +14,10 @@ const accepted: Sample = {
 
 type CameraWindow = Window & { freezeCapture: () => void; testStream: MediaStream; cameraConstraints: MediaStreamConstraints };
 
-async function camera(page: Page) {
-  await page.addInitScript(() => {
+async function camera(page: Page, delayPermission = false) {
+  await page.addInitScript(delay => {
     Object.defineProperty(navigator.mediaDevices, "getUserMedia", { value: async (constraints: MediaStreamConstraints) => {
+      if (delay) await new Promise<void>(resolve => { (window as unknown as { grantCamera: () => void }).grantCamera = resolve; });
       (window as unknown as CameraWindow).cameraConstraints = constraints;
       const canvas = document.createElement("canvas");
       canvas.width = 320; canvas.height = 240;
@@ -31,7 +33,7 @@ async function camera(page: Page) {
       (window as unknown as CameraWindow).testStream = stream;
       return stream;
     } });
-  });
+  }, delayPermission);
   await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: false } }));
 }
 
@@ -305,6 +307,120 @@ test("tracking and heatmap position update between measurement and model samples
   await expect(rect).toHaveAttribute("x", "128");
   await expect(map).toHaveAttribute("x", "128");
   await expect(page.locator(".heart-value")).toHaveText("72BPM");
+});
+
+test("face loss between samples immediately clears BPM and recovery waits for a new sample", async ({ page }) => {
+  await camera(page);
+  let tracking = true;
+  let sendSample = true;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    let t = 0;
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        if (JSON.parse(message).type === "start") socket.send(JSON.stringify({ type: "ready", ai_status: "not_requested" }));
+        return;
+      }
+      t += 1/30;
+      socket.send(JSON.stringify({ type: "ack" }));
+      socket.send(JSON.stringify({ type: "face_heatmap", t, heatmap: null,
+        camera: { ...accepted.camera, face_visible: tracking, face_count: tracking ? 1 : 0 } }));
+      if (sendSample) socket.send(JSON.stringify({ type: "sample", interventions: [], sample: { ...accepted, t } }));
+    });
+  });
+  await page.goto("/");
+  await start(page);
+  sendSample = false;
+  tracking = false;
+  await expect(page.locator(".heart-value")).toHaveText("—BPM", { timeout: 1500 });
+  await expect(page.locator(".measurement-state")).toHaveText("Find your face");
+  tracking = true;
+  await page.waitForTimeout(200);
+  await expect(page.locator(".heart-value")).toHaveText("—BPM");
+  sendSample = true;
+  await expect(page.locator(".heart-value")).toHaveText("72BPM");
+});
+
+test("camera permission granted after finish immediately stops the late stream", async ({ page }) => {
+  await camera(page, true);
+  await page.routeWebSocket("**/ws/measure", socket => {
+    socket.onMessage(message => {
+      if (typeof message === "string" && JSON.parse(message).type === "start")
+        socket.send(JSON.stringify({ type: "ready", ai_status: "not_requested" }));
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+  await page.getByLabel("I agree to send video frames").check();
+  await page.getByRole("button", { name: "Enable camera & start" }).click();
+  await expect.poll(() => page.evaluate(() => typeof (window as unknown as { grantCamera?: unknown }).grantCamera)).toBe("function");
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await page.evaluate(() => (window as unknown as { grantCamera: () => void }).grantCamera());
+  await expect.poll(() => page.evaluate(() => (window as unknown as CameraWindow).testStream?.getTracks().every(t => t.readyState === "ended"))).toBe(true);
+});
+
+test("three generated-camera runs export delivery diagnostics and release capture between sessions", async ({ page }) => {
+  await camera(page);
+  let sessions = 0;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    let firstTimestamp: number | null = null;
+    const samples: Sample[] = [];
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        const command = JSON.parse(message);
+        if (command.type === "start") {
+          sessions++;
+          socket.send(JSON.stringify({ type: "ready", ai_status: "ready" }));
+        } else if (command.type === "finish") {
+          const statement = { kind: "limitation" as const, text: "Generated camera fixture.", evidence_ids: ["limits"] };
+          const report: Report = {
+            id: `capture-test-${sessions}`, created_at: "2026-10-28T20:00:00Z", mode: "camera", analyst: "deterministic", ai_status: "pending",
+            samples, interventions: [], evidence: { limits: "Generated frames, no physiological measurement." }, claims: [],
+            analysis: { summary: [statement], quality: [statement], interventions: [statement], recommendations: [statement] },
+            stats: { mean_bpm: 72, median_bpm: 72, min_bpm: 72, max_bpm: 72, sd_bpm: 0, mean_sqi: .9,
+              usable_fraction: 1, tracking_fraction: 1, signal_coverage: 1, duration: samples.at(-1)!.t, stable_at: 0,
+              mean_fps: 30, mean_latency_ms: 10, lighting_issue_fraction: 0, motion_issue_fraction: 0, alignment_issue_fraction: 0 },
+          };
+          socket.send(JSON.stringify({ type: "report", report }));
+          socket.send(JSON.stringify({ type: "report", report: { ...report, ai_status: "complete" } }));
+        }
+        return;
+      }
+      const timestamp = message.readDoubleLE(0);
+      firstTimestamp ??= timestamp;
+      const sample = { ...accepted, t: Math.round((timestamp-firstTimestamp)*1000)/1000 };
+      samples.push(sample);
+      socket.send(JSON.stringify({ type: "sample", sample, interventions: [] }));
+      socket.send(JSON.stringify({ type: "ack" }));
+    });
+  });
+  await page.goto("/");
+  for (let run = 1; run <= 3; run++) {
+    await start(page);
+    await page.waitForTimeout(250);
+    await page.getByRole("button", { name: "Finish", exact: true }).click();
+    await expect(page.getByText("Measurement complete", { exact: true })).toBeVisible();
+    await page.getByText("Capture & delivery diagnostics", { exact: true }).click();
+    await expect(page.getByText(/Observed video callbacks:/)).toBeVisible();
+    const downloading = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export JSON" }).click();
+    const download = await downloading;
+    const report: Report = JSON.parse(await readFile((await download.path())!, "utf8"));
+    expect(report.id).toBe(`capture-test-${run}`);
+    expect(report.ai_status).toBe("complete");
+    const diagnostics = report.capture_diagnostics!;
+    expect(diagnostics.width).toBe(320);
+    expect(diagnostics.frames_sent).toBeGreaterThan(2);
+    expect(diagnostics.frames_acknowledged).toBe(diagnostics.frames_sent);
+    expect(diagnostics.callback_fps).toBeGreaterThan(0);
+    expect(diagnostics.sent_fps).toBeGreaterThan(0);
+    expect(diagnostics.sample_age_observations).toBe(report.samples.length);
+    expect(diagnostics.mean_sample_frame_age_ms).toBeGreaterThanOrEqual(0);
+    expect(diagnostics.max_sample_frame_age_ms).toBeGreaterThanOrEqual(diagnostics.mean_sample_frame_age_ms!);
+    expect(diagnostics.max_sample_gap_ms).toBeGreaterThan(0);
+    expect(await page.evaluate(() => (window as unknown as CameraWindow).testStream.getTracks().every(t => t.readyState === "ended"))).toBe(true);
+    await page.getByRole("button", { name: "Start a new measurement", exact: true }).click();
+  }
+  expect(sessions).toBe(3);
 });
 
 test("waveform uses signal times, scrolls between updates, and shows readable scales", async ({ page }) => {

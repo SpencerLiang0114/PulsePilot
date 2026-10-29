@@ -36,6 +36,8 @@ Preserve throughout: independent frame processing, deterministic BPM acceptance,
 
 **Goal:** Complete a real-person session reliably from camera permission to exported report.
 
+**Status (October 28):** Completed for the declared local self-test: three consecutive 90-second physical-camera sessions completed and exported without a backend restart; motion/face-loss degradation and accepted-signal recovery were recorded. See [P4 real-camera measurement](p4-real-camera.md) for metrics, lifecycle fixes and limits. The participant-declared dim-room run did not cross the image-darkness threshold, so low-light robustness remains unestablished. This is one participant on one machine, not reference accuracy or user-benefit evidence.
+
 ### Scope
 
 1. Exercise the actual webcam with a consenting person under stable lighting, reduced lighting, motion, and recovery. Start with the developer's own camera.

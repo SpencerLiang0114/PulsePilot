@@ -225,6 +225,8 @@ class FacePhysEstimator:
         lag = max(0, self.last_timestamp-model.ts[count-1]) if count else 0
         sample = Sample(t=round(elapsed, 3), sqi=sqi, fps=round(fps, 1),
                         latency_ms=round(self.processing_ms + lag*1000, 1),
+                        processing_ms=round(self.processing_ms, 1),
+                        inference_lag_ms=round(lag*1000, 1) if count else None,
                         camera=self.camera.model_copy(deep=True), waveform=wave, waveform_times=wave_times)
         if lag > 0.5:
             fresh = 0

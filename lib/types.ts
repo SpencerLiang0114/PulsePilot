@@ -14,6 +14,7 @@ export type CameraMetrics = {
 export type Sample = {
   t: number; bpm: number | null; sqi: number | null; usable: boolean; state: string;
   fps: number; latency_ms: number; camera: CameraMetrics; waveform: number[]; waveform_times?: number[];
+  processing_ms?: number | null; inference_lag_ms?: number | null;
 };
 export type Intervention = {
   id: string; issue: string; action: string; started_at: number; evaluated_at: number | null;
@@ -33,6 +34,14 @@ export type GroundedClaim = {
   claim_id: string; claim_type: string; section: keyof Analysis; kind: "measurement" | "quality" | "outcome" | "limitation";
   statement_kind: Statement["kind"]; evidence_id: string; metric: string; value: number | string | null; text: string;
 };
+export type CaptureDiagnostics = {
+  initialization_ms: number; width: number; height: number; track_fps: number | null;
+  frame_callbacks: number; frames_sent: number; frames_acknowledged: number;
+  callback_fps: number | null; sent_fps: number | null;
+  mean_ack_round_trip_ms: number | null; max_ack_round_trip_ms: number | null;
+  sample_age_observations: number; mean_sample_frame_age_ms: number | null; max_sample_frame_age_ms: number | null;
+  max_sample_gap_ms: number | null;
+};
 export type Report = {
   id: string; created_at: string; mode: Mode; analyst: "deterministic" | "muse"; ai_status: string;
   stats: {
@@ -48,6 +57,7 @@ export type Report = {
     graph_version: string; model_identifier: string | null; route: string; status: string;
     validation_result: boolean; fallback_reason: string | null; model_latency_ms: number; graph_latency_ms: number;
     api_requests: number; input_tokens: number | null; output_tokens: number | null }[];
+  capture_diagnostics?: CaptureDiagnostics | null;
 };
 export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean; agent_mode?: AgentMode };
 

@@ -204,3 +204,14 @@ def test_waveform_timestamps_preserve_session_offset_and_missing_values():
     sample = estimator.snapshot()
     assert sample.waveform == [1, -1]
     assert sample.waveform_times == pytest.approx([5.9, 6.0])
+    assert sample.processing_ms == 0
+    assert sample.inference_lag_ms == 100
+
+
+def test_no_completed_inference_has_unavailable_lag():
+    estimator = FacePhysEstimator()
+    estimator.start_time = estimator.epoch = estimator.last_timestamp = 10
+    estimator.model = SimpleNamespace(n_signal=0, ts=[], signal_buff={"bvp": []})
+    sample = estimator.snapshot()
+    assert sample.bpm is None and not sample.usable
+    assert sample.inference_lag_ms is None
