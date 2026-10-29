@@ -30,6 +30,7 @@ def test_invalid_signal_never_displays_bpm(candidate, sqi, fps, fresh):
     for _ in range(4):
         result = gate.apply(good_sample(sqi=sqi, fps=fps), candidate, fresh)
         assert result.bpm is None and not result.usable
+        assert result.report_bpm is None
 
 
 def test_hysteresis_holds_then_drops():
@@ -38,6 +39,37 @@ def test_hysteresis_holds_then_drops():
         gate.apply(good_sample(), 72, 12)
     assert gate.apply(good_sample(sqi=.50), 72, 12).usable
     assert not gate.apply(good_sample(sqi=.40), 72, 12).usable
+
+
+def test_preliminary_report_threshold_does_not_change_live_acceptance():
+    gate = ReliabilityGate()
+    for sqi in (.35, .40, .54):
+        result = gate.apply(good_sample(sqi=sqi), 72.34, 12)
+        assert result.report_bpm == 72.3
+        assert result.bpm is None and not result.usable
+    assert gate.apply(good_sample(sqi=.349), 72, 12).report_bpm is None
+    assert gate.apply(good_sample(), 72, 12).report_bpm == 72
+    assert not gate.stable
+
+
+@pytest.mark.parametrize("fps,expected", [(19.9, None), (20, 72), (23.9, 72)])
+def test_preliminary_report_allows_lower_capture_rate_only_for_reports(fps, expected):
+    gate = ReliabilityGate()
+    for _ in range(4):
+        result = gate.apply(good_sample(sqi=.4, fps=fps), 72, 12)
+        assert result.report_bpm == expected
+        assert result.bpm is None and not result.usable
+
+
+@pytest.mark.parametrize("field,value", [
+    ("face_visible", False), ("face_count", 2), ("visibility_proxy", .5),
+    ("brightness", 20), ("motion", .5), ("center_offset", .3),
+    ("yaw_proxy", .5), ("face_size", .1), ("light_imbalance", 60),
+])
+def test_preliminary_report_keeps_camera_rejections(field, value):
+    sample = good_sample(sqi=.4)
+    setattr(sample.camera, field, value)
+    assert ReliabilityGate().apply(sample, 72, 12).report_bpm is None
 
 
 @pytest.mark.parametrize("confidence", [.98, np.array([.98], dtype=np.float32)])

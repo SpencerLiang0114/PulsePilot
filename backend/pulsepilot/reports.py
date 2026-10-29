@@ -12,7 +12,7 @@ from .schemas import (
     Statement,
     Statistics,
 )
-from .sensing import ACTIONS, issues
+from .sensing import ACTIONS, THRESHOLDS, issues
 
 
 def statement(text: str, evidence: str, kind="fact") -> Statement:
@@ -21,6 +21,7 @@ def statement(text: str, evidence: str, kind="fact") -> Statement:
 
 def build_report(config: SessionConfig, samples: list[Sample], interventions: list[Intervention]) -> Report:
     accepted = [s.bpm for s in samples if s.usable and s.bpm is not None]
+    preliminary = [s.report_bpm for s in samples if not s.usable and s.report_bpm is not None]
     quality = [s.sqi for s in samples if s.sqi is not None]
     n = len(samples)
     fraction = lambda values: sum(values)/n if n else 0
@@ -44,6 +45,11 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         lighting_issue_fraction=lighting, motion_issue_fraction=motion, alignment_issue_fraction=alignment,
     )
     evidence = {
+        "report_trend": (f"{len(preliminary)} preliminary report windows at SQI >= {THRESHOLDS.report_sqi}; "
+                         f"capture rate >= {THRESHOLDS.report_min_fps:g} fps. Same camera-condition, freshness "
+                         "and BPM-range checks as live estimates, without the "
+                         "three-window stability requirement. Excluded from accepted HR statistics, "
+                         "usable fraction and coaching outcomes. This threshold is not accuracy-validated."),
         "heart_rate": (f"Accepted HR mean {stats.mean_bpm}, median {stats.median_bpm}, "
                        f"range {stats.min_bpm}–{stats.max_bpm} BPM; {len(accepted)} accepted windows.")
                       if accepted else "No usable heart-rate windows; no average or range can be reported.",

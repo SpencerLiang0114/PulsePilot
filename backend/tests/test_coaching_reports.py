@@ -81,3 +81,19 @@ def test_simulation_produces_report_with_actual_logged_outcomes():
     for section in report.analysis.model_dump().values():
         for item in section:
             assert all(ref in report.evidence for ref in item["evidence_ids"])
+
+
+def test_preliminary_points_survive_export_without_changing_accepted_statistics():
+    gate = ReliabilityGate()
+    samples = [gate.apply(good_sample(t=12+i*.5, sqi=.4), 90, 12+i*.5) for i in range(3)]
+    report = build_report(SessionConfig(), samples, [])
+    assert report.stats.mean_bpm is None
+    assert report.stats.usable_fraction == 0
+    assert report.stats.stable_at is None
+    assert all(s["report_bpm"] == 90 and s["bpm"] is None for s in report.model_dump()["samples"])
+    assert "3 preliminary report windows" in report.evidence["report_trend"]
+    for i in range(3):
+        samples.append(gate.apply(good_sample(t=14+i*.5), 70, 14+i*.5))
+    report = build_report(SessionConfig(), samples, [])
+    assert report.stats.mean_bpm == 70
+    assert report.stats.usable_fraction == pytest.approx(1/6)

@@ -13,6 +13,8 @@ class Thresholds:
     min_fps: float = 24.0
     sqi_enter: float = 0.55
     sqi_exit: float = 0.45
+    report_sqi: float = 0.35
+    report_min_fps: float = 20.0
     center_offset: float = 0.18
     min_size: float = 0.23
     max_size: float = 0.70
@@ -159,15 +161,22 @@ class ReliabilityGate:
 
     def apply(self, sample: Sample, candidate: float | None, fresh_seconds: float) -> Sample:
         t = THRESHOLDS
-        camera_ok = not [issue for issue in issues(sample) if issue != "signal"]
+        detected = issues(sample)
+        camera_ok = not [issue for issue in detected if issue != "signal"]
         threshold = t.sqi_exit if self.stable else t.sqi_enter
-        valid = (camera_ok and fresh_seconds >= t.min_window and sample.fps >= t.min_fps
-                 and sample.sqi is not None and sample.sqi >= threshold
-                 and candidate is not None and math.isfinite(candidate) and 40 <= candidate <= 180)
+        capture_valid = (camera_ok and fresh_seconds >= t.min_window and sample.fps >= t.min_fps
+                         and candidate is not None and math.isfinite(candidate) and 40 <= candidate <= 180)
+        valid = capture_valid and sample.sqi is not None and sample.sqi >= threshold
         self.good_count = self.good_count + 1 if valid else 0
         self.stable = bool(valid and (self.stable or self.good_count >= 3))
         sample.usable = self.stable
         sample.bpm = round(candidate, 1) if self.stable else None
+        # Report-only preliminary estimates never change live acceptance or coaching outcomes.
+        report_capture_valid = (not [issue for issue in detected if issue not in {"signal", "cadence"}]
+                                and fresh_seconds >= t.min_window and sample.fps >= t.report_min_fps
+                                and candidate is not None and math.isfinite(candidate) and 40 <= candidate <= 180)
+        sample.report_bpm = (round(candidate, 1) if report_capture_valid and sample.sqi is not None
+                             and sample.sqi >= t.report_sqi else None)
         sample.state = ("Signal stable" if self.stable else
                         "Adjust your position" if not camera_ok else
                         "Measuring" if fresh_seconds < t.min_window else "Low confidence")

@@ -42,6 +42,7 @@ class CameraMetrics(StrictModel):
 class Sample(StrictModel):
     t: float
     bpm: float | None = None
+    report_bpm: float | None = Field(default=None, ge=40, le=180)
     sqi: float | None = None
     usable: bool = False
     state: str = "Measuring"

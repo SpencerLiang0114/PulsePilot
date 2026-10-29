@@ -6,6 +6,10 @@ import { Analysis, clockText, decisionLabel, percent, Report as ReportData } fro
 
 export function ReportView({ report, onBack, onNew }: { report: ReportData; onBack: () => void; onNew: () => void }) {
   const { stats } = report;
+  const accepted = report.samples.map(s => s.usable ? s.bpm : null);
+  const preliminary = report.samples.map(s => s.usable ? null : s.report_bpm ?? null);
+  const plotted = [...accepted, ...preliminary].filter((v): v is number => v != null);
+  const preliminaryCount = preliminary.filter(v => v != null).length;
   const download = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
     const a = document.createElement("a");
@@ -35,9 +39,12 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
       <div><span>First stable signal</span><strong>{stats.stable_at == null ? "—" : clockText(stats.stable_at)}</strong></div>
     </div>
     <div className="report-charts">
-      <section className="panel"><div className="section-heading"><h3>Heart rate over time</h3><span>Accepted estimates · BPM</span></div>
-        <Chart values={report.samples.map(s => s.bpm)} times={report.samples.map(s => s.t)} label="Accepted heart-rate estimates over the session" unit="BPM" height={150} showScale domain={[Math.max(40, Math.floor((stats.min_bpm ?? 60) / 10) * 10 - 10), Math.min(180, Math.ceil((stats.max_bpm ?? 90) / 10) * 10 + 10)]} empty="No accepted heart-rate windows" />
+      <section className="panel"><div className="section-heading"><h3>Heart rate over time</h3><span>Estimates · BPM</span></div>
+        <Chart values={accepted} preliminary={preliminary} times={report.samples.map(s => s.t)} label="Accepted and preliminary heart-rate estimates over the session" unit="BPM" height={150} showScale domain={[Math.max(40, Math.floor((plotted.length ? Math.min(...plotted) : 60) / 10) * 10 - 10), Math.min(180, Math.ceil((plotted.length ? Math.max(...plotted) : 90) / 10) * 10 + 10)]} empty="No heart-rate windows passed the report checks" />
         <div className="axis"><span>0:00</span><span>{clockText(stats.duration)}</span></div>
+        <p className="trend-legend"><span>● Accepted</span><span>○ Preliminary · amber, dashed</span></p>
+        <p className="trend-note">{accepted.filter(v => v != null).length} accepted · {preliminaryCount} preliminary windows. Preliminary estimates use lower signal-quality and frame-rate thresholds and are excluded from the averages above. Gaps mean no eligible estimate; no values are filled in.</p>
+        {report.evidence.report_trend && <details className="trend-note"><summary>Report threshold & limits</summary><p>{report.evidence.report_trend}</p></details>}
       </section>
       <section className="panel"><div className="section-heading"><h3>Signal quality over time</h3><span>Periodicity · %</span></div>
         <Chart values={report.samples.map(s => s.sqi == null ? null : s.sqi * 100)} times={report.samples.map(s => s.t)} label="Signal periodicity over the session" unit="%" domain={[0, 100]} height={150} showScale />

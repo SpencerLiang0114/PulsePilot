@@ -216,6 +216,9 @@ main { max-width:1450px; margin:auto; padding:35px 36px 22px; }
 .report-stats strong { display:block; font-size:24px; font-weight:650; margin-top:11px; letter-spacing:-.7px; }
 .report-stats small { font-size:10px; color:#90a2ae; font-weight:500; letter-spacing:0; }
 .report-charts { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.trend-legend { display:flex; flex-wrap:wrap; gap:16px; font-size:11px; margin-top:12px; color:#168286; }
+.trend-legend span:last-child { color:#a36614; }
+.trend-note { font-size:11px; line-height:1.7; color:#617382; margin-top:10px; }
 .panel { border:1px solid var(--line); background:white; border-radius:11px; padding:22px; }
 .axis { display:flex; justify-content:space-between; font-size:9px; color:#95a4b0; margin-top:8px; }
 .analysis-heading { display:flex; align-items:center; gap:12px; margin:36px 0 19px; }
