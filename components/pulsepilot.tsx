@@ -27,9 +27,9 @@ function FaceGuide({ active }: { active: boolean }) {
   </svg>;
 }
 
-function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
+function ConsentDialog({ mode, onClose, onStart, fileName }: {
   mode: Mode; onClose: () => void; onStart: (duration: number, aiConsent: boolean, coaching: CoachingMode, healthAiConsent: boolean, resting: boolean, symptoms: boolean) => void;
-  aiAvailable: boolean; fileName?: string;
+  fileName?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [duration, setDuration] = useState(60);
@@ -62,7 +62,7 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
       <label className="check-label"><input type="checkbox" checked={symptoms} onChange={e => setSymptoms(e.target.checked)} /><span>I am currently experiencing chest pain, severe shortness of breath, or fainting.</span></label>
       {symptoms && <p role="alert">Seek emergency medical help now; call your local emergency number. Do not wait for a measurement or AI response. <a href="https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack" target="_blank" rel="noreferrer">American Heart Association guidance</a></p>}
     </>}
-    <button className="primary wide" onClick={() => onStart(duration, aiAvailable, "meta", aiAvailable, false, symptoms)}>
+    <button className="primary wide" onClick={() => onStart(duration, true, "meta", true, false, symptoms)}>
       {mode === "simulation" ? <Play size={17} /> : <Camera size={18} />}{mode === "simulation" ? "Start simulated session" : mode === "recording" ? "Process recording" : "Enable camera & start"}
     </button>
   </dialog>;
@@ -220,7 +220,7 @@ export function PulsePilot() {
         </div>}
       </main>
     </div>
-    {setup && <ConsentDialog mode={setup} aiAvailable={!!m.health?.ai_configured && m.health.agent_mode !== "off"} fileName={setup === "recording" ? file?.name : undefined}
+    {setup && <ConsentDialog mode={setup} fileName={setup === "recording" ? file?.name : undefined}
       onClose={() => setSetup(null)} onStart={(duration, aiConsent, coaching, healthAiConsent, resting, symptoms) => {
         const mode = setup; setSetup(null);
         void m.start({ mode, duration, aiConsent, coaching, healthAiConsent,

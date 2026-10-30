@@ -27,14 +27,14 @@ for (const aiAvailable of [true, false]) {
       if (typeof message === "string") start = JSON.parse(message);
     }));
     await page.goto("/");
-    await page.getByRole("button", { name: "Explore the demo" }).click();
+    await page.getByRole("button", { name: "Start measurement", exact: true }).click();
     await expect(page.getByRole("dialog").getByText("Muse Spark", { exact: true })).toBeVisible();
     await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
-    await expect(page.getByRole("dialog").getByRole("checkbox")).toHaveCount(0);
-    await page.getByRole("button", { name: "Start simulated session" }).click();
+    await expect(page.getByRole("dialog").getByRole("checkbox")).toHaveCount(1);
+    await page.getByRole("button", { name: "Enable camera & start" }).click();
     await expect.poll(() => start?.coaching).toBe("meta");
-    expect(start?.ai_consent).toBe(aiAvailable);
-    expect(start?.health_ai_consent).toBe(aiAvailable);
+    expect(start?.ai_consent).toBe(true);
+    expect(start?.health_ai_consent).toBe(true);
   });
 }
 
