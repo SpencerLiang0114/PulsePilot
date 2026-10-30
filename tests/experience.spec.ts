@@ -71,6 +71,7 @@ test("camera consent is required and cancelled setup leaves no measurement", asy
   await page.getByLabel("I agree to send video frames").check();
   await expect(start).toBeEnabled();
   await page.getByRole("button", { name: "Close setup" }).click();
+  await expect(page.getByRole("button", { name: "Start measurement", exact: true })).toBeFocused();
   await expect(page.getByText("Camera off", { exact: true })).toBeVisible();
   await expect(page.getByText("Not measuring", { exact: true })).toBeVisible();
 });

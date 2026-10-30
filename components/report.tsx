@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Printer, CircleCheck, FlaskConical } from "lucide-react";
+import { ArrowLeft, Download, Printer, CircleCheck, FlaskConical, Sparkles } from "lucide-react";
 import { Chart } from "./chart";
 import { Analysis, HealthInsightBundle, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
 
@@ -50,8 +50,9 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
       <div><button className="secondary small" onClick={download}><Download size={15} /> Export JSON</button><button className="secondary small" onClick={() => window.print()}><Printer size={15} /> Print report</button></div>
     </div>
     {report.mode === "simulation" && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulated session</strong> Synthetic data for exploring the experience. These are not your measurements.</div>}
-    <header className="report-heading"><div><div className="completion-label"><CircleCheck size={18} /> Measurement complete</div>
+    <header className="report-heading"><div>
       <h1>A clearer picture of<br />your measurement.</h1>
+      <div className="completion-label"><CircleCheck size={18} /> Measurement complete</div>
       <p>{new Date(report.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} <span className="separator">/</span> {clockText(stats.duration)} session <span className="separator">/</span> {report.mode === "camera" ? "Live camera" : report.mode === "recording" ? "Video recording" : "Simulation"}</p></div>
       <div className="report-main-number"><span>Average estimated heart rate</span><div>{stats.mean_bpm ?? "—"} <small>BPM</small></div><p>{stats.mean_bpm == null ? "Insufficient usable signal" : "From accepted measurement windows"}</p></div>
     </header>
@@ -74,15 +75,15 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
         <div className="axis"><span>0:00</span><span>{clockText(stats.duration)}</span></div>
       </section>
     </div>
-    <div className="analysis-heading"><div className="coach-symbol">✳</div><div><h2>Measurement analysis</h2><p>
+    <div className="analysis-heading"><Sparkles className="coach-symbol" size={26} /><div><h2>Measurement analysis</h2><p>
       {report.analyst === "muse" ? "Selected by Muse Spark from server-validated session evidence" :
         report.ai_status === "pending" ? "Numerical report ready. Muse Spark is preparing its interpretation…" :
         report.ai_status === "unavailable" ? "Muse Spark was unavailable. Showing evidence-based deterministic analysis." :
         report.ai_status === "cancelled" ? "AI interpretation was stopped. Showing evidence-based deterministic analysis." :
         "Evidence-based deterministic analysis. Muse Spark was not used."}
     </p></div></div>
-    <div className="analysis-sections">{sections.map(([key, title], index) => <section key={key} className="analysis-section">
-      <div className="section-index">{index + 1}</div><div><h3>{title}</h3>
+    <div className="analysis-sections">{sections.map(([key, title]) => <section key={key} className="analysis-section">
+      <div><h3>{title}</h3>
         {report.analysis[key].map((item, i) => <div className="statement" key={i}><p>{item.text}</p>
           <details><summary>{item.kind === "fact" ? "Measured evidence" : item.kind === "limitation" ? "Limitations" : "Possible explanation"} <span>View source</span></summary>
             {item.evidence_ids.map(id => <p key={id}>{report.evidence[id]}</p>)}

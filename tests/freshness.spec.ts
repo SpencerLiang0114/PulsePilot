@@ -454,6 +454,7 @@ test("waveform uses signal times, scrolls between updates, and shows readable sc
   await expect.poll(() => trace.getAttribute("d")).not.toBe(initial);
   const pointCount = (initial?.match(/[ML]/g) ?? []).length;
   expect(pointCount).toBe(240);
+  await chart.scrollIntoViewIfNeeded();
   const box = await chart.boundingBox();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + 50);
   await expect(chart.locator(".chart-tooltip")).toContainText("normalized BVP");

@@ -16,3 +16,7 @@ playwright-report/
 .DS_Store
 # Added by code-review-graph
 .code-review-graph/
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json

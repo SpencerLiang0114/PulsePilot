@@ -22,7 +22,6 @@ function FaceGuide({ active }: { active: boolean }) {
   return <svg className={`face-guide ${active ? "active" : ""}`} viewBox="0 0 300 330" fill="none" aria-hidden="true">
     <path className="guide-bracket" d="M65 44H40v35M235 44h25v35M40 250v35h25M260 250v35h-25" />
     <ellipse className="guide-oval" cx="150" cy="148" rx="76" ry="99" />
-    <path className="guide-person" d="M122 243v16c-40 6-67 22-80 44M178 243v16c40 6 67 22 80 44M117 137h15M168 137h15M150 146v27l-9 5M130 201q20 10 40 0" />
     <path className="guide-cross" d="M145 41h10M150 36v10M145 255h10M150 250v10" />
     <circle className="guide-dot" cx="150" cy="179" r="3" />
   </svg>;
@@ -40,17 +39,27 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
   const [resting, setResting] = useState(false);
   const [symptoms, setSymptoms] = useState(false);
   const [coaching, setCoaching] = useState<CoachingMode>("meta");
-  useEffect(() => { dialogRef.current?.showModal(); }, []);
-  return <dialog ref={dialogRef} className="setup-dialog" onCancel={onClose}>
+  useEffect(() => {
+    const opener = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      const target = opener instanceof HTMLElement && opener.isConnected && !opener.matches(":disabled")
+        ? opener : document.getElementById("main-content");
+      target?.focus({ preventScroll: true });
+    };
+  }, []);
+  return <dialog ref={dialogRef} className="setup-dialog" aria-labelledby="setup-title" onCancel={onClose}>
     <button className="close-button" aria-label="Close setup" onClick={onClose}><X size={20} /></button>
     <div className="dialog-icon">{mode === "simulation" ? <FlaskConical size={25} /> : <Camera size={25} />}</div>
-    <h2>{mode === "simulation" ? "Explore a guided session." : "A moment to get ready."}</h2>
+    <h2 id="setup-title">{mode === "simulation" ? "Explore a guided session." : "A moment to get ready."}</h2>
     <p>{mode === "simulation" ? "Watch a reproducible, accelerated scenario with changing light and motion. Every value is synthetic."
       : "Sit comfortably, face a steady light, and keep your whole face in view."}</p>
     {fileName && <div className="file-name"><FileText size={16} /> {fileName}</div>}
     <label className="field-label" htmlFor="duration">Measurement length</label>
     <div className="duration-options" id="duration" role="group" aria-label="Measurement length">
-      {[30, 60, 90].map(n => <button key={n} className={duration === n ? "selected" : ""} onClick={() => setDuration(n)}>{n} seconds{n === 60 && <span>Recommended</span>}</button>)}
+      {[30, 60, 90].map(n => <button key={n} aria-pressed={duration === n} className={duration === n ? "selected" : ""} onClick={() => setDuration(n)}>{n} seconds{n === 60 && <span>Recommended</span>}</button>)}
     </div>
     <label className="field-label" htmlFor="coaching-mode">Measurement coaching</label>
     <select id="coaching-mode" value={coaching} onChange={e => setCoaching(e.target.value as CoachingMode)}>
@@ -119,23 +128,18 @@ export function PulsePilot() {
         "Good measurements start with a comfortable setup.");
 
   return <div className="app-shell">
-    <aside className="sidebar">
+    <a className="skip-link" href="#main-content">Skip to content</a>
+    <header className="sidebar">
       <Brand />
-      <div className="workspace-label">Your measurement space</div>
       <nav aria-label="Main navigation">
-        <button className={view === "measure" ? "nav-item selected" : "nav-item"} onClick={() => go("measure")} disabled={busy && view !== "measure"}><Activity size={19} />Measure<span className="nav-dot" /></button>
-        <button className={view === "reports" ? "nav-item selected" : "nav-item"} onClick={() => go("reports")} disabled={busy}><FileText size={19} />Session reports{reports.length > 0 && <span className="nav-count">{reports.length}</span>}</button>
-        <button className={view === "about" ? "nav-item selected" : "nav-item"} onClick={() => go("about")} disabled={busy}><CircleHelp size={19} />How it works</button>
+        <button aria-current={view === "measure" ? "page" : undefined} className={view === "measure" ? "nav-item selected" : "nav-item"} onClick={() => go("measure")} disabled={busy && view !== "measure"}><Activity size={18} />Measure<span className="nav-dot" /></button>
+        <button aria-current={view === "reports" ? "page" : undefined} className={view === "reports" ? "nav-item selected" : "nav-item"} onClick={() => go("reports")} disabled={busy}><FileText size={18} />Session reports{reports.length > 0 && <span className="nav-count">{reports.length}</span>}</button>
+        <button aria-current={view === "about" ? "page" : undefined} className={view === "about" ? "nav-item selected" : "nav-item"} onClick={() => go("about")} disabled={busy}><CircleHelp size={18} />How it works</button>
       </nav>
-      <div className="sidebar-bottom"><div className="privacy-note"><ShieldCheck size={24} /><strong>Just you. Just this moment.</strong><p>No saved video. No audio.<br />You control every measurement.</p></div>
-        <div className="sidebar-footer"><span className="tiny-logo"><Activity size={14} /></span>Built for a steadier signal<span>v0.1</span></div>
-      </div>
-    </aside>
+      <span className="research-badge"><span />Research preview</span>
+    </header>
     <div className="workspace">
-      <header className="topbar"><div className="breadcrumb"><span>PulsePilot</span><ChevronRight size={14} />{view === "measure" ? "Live measurement" : view === "reports" ? "Session reports" : "How it works"}</div>
-        <div className="topbar-right"><span className="research-badge"><span />Research preview</span><button className="icon-button" aria-label="How PulsePilot works" disabled={busy} onClick={() => go("about")}><CircleHelp size={19} /></button></div>
-      </header>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         {view === "measure" && <>
           <div className="page-heading"><div><h1>Find your steady signal.</h1><p>A quiet moment, your camera, and a little guidance.</p></div>
             <button className="service-indicator" onClick={() => void m.refreshHealth()} title="Refresh service status"><span className={m.health ? "online" : ""} />{m.health ? m.health.model_ready ? "Inference ready" : "Service connected" : "Service offline"}<RotateCcw size={12} /></button>
@@ -147,7 +151,6 @@ export function PulsePilot() {
               <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
               <div ref={captureRef} className={`capture-stage ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
                 <video ref={m.videoRef} playsInline muted className={`${m.mode === "camera" ? "mirrored" : ""} ${liveVideo ? "visible" : ""}`} aria-label="Live camera or recording preview" />
-                <div className="camera-grid" />
                 <div className="camera-top"><span className="camera-badge"><span className={measuring ? "live-dot" : "off-dot"} />{measuring ? sources[m.mode] : m.status === "connecting" ? "Connecting" : "Camera off"}</span>
                   <button className="camera-expand" aria-label="Expand camera preview" onClick={() => {
                     if (document.fullscreenElement) void document.exitFullscreen();
@@ -200,7 +203,7 @@ export function PulsePilot() {
                 <div className={`measurement-state ${current?.usable ? "good" : ""}`}><span />{current?.state ?? (m.status === "connecting" ? "Initializing" : "Not measuring")}</div>
                 <div className="quality-meter"><div><span>Signal quality</span><strong>{percent(current?.sqi)}</strong></div><div className="meter-track"><span style={{ width: `${(current?.sqi ?? 0) * 100}%` }} /></div><p>{current?.sqi != null ? "Signal periodicity, not an accuracy score." : "We’ll show a number when there’s enough usable signal."}</p></div>
               </section>
-              <section className="coach-panel"><div className="section-heading"><h3><span className="coach-symbol">✳</span>Your measurement coach</h3><span className="live-label">{measuring ? m.coachingMode === "passive" ? "Passive" : m.coachingState.toLowerCase() : "Ready"}</span></div>
+              <section className="coach-panel"><div className="section-heading"><h3><Sparkles className="coach-symbol" size={18} />Your measurement coach</h3><span className="live-label">{measuring ? m.coachingMode === "passive" ? "Passive" : m.coachingState.toLowerCase() : "Ready"}</span></div>
                 <h2 aria-live="polite">{guideMessage}</h2>
                 {active && <small>{decisionLabel(active)}</small>}
                 <p>{active?.explanation ?? (active ? "We’ll compare the signal before and after this adjustment." : "Sit at ease. Keep the light in front of you. We’ll help with the rest.")}</p>
