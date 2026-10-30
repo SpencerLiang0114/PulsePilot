@@ -220,3 +220,7 @@ The camera area has a navy heading over a deeper blue capture field. Four soft-c
 - **Don't** style a preliminary estimate as an accepted measurement.
 - **Don't** present the FacePhys heatmap as a blood-flow or heart-rate visualization; it shows model attention.
 - **Don't** fill empty charts or readings with invented values.
+
+## Session reports
+
+Reports use a centered 1120px reading width. The session title and accepted heart-rate summary lead, followed by supporting statistics and the plain-language takeaways: “What this means” and “What to do next.” These takeaways sit side by side on desktop and stack below 800px. The timeline follows the takeaways; accepted and preliminary series keep their distinct visual meanings. Health Insights and safety limitations stay visible. Every report section uses the same structure: a heading and short supporting text above a white, lightly bordered, rounded content panel. Results, timeline charts, Health Insights, measurement quality and coaching outcomes, and capture diagnostics follow this pattern. All main sections remain fully visible; only statement sources and chart explanations use disclosures. Evidence stays attached to its statement.

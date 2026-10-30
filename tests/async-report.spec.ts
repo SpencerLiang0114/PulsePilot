@@ -27,8 +27,8 @@ test("late AI interpretation updates history without navigating away", async ({ 
     }));
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Explore the demo" }).click();
-  await page.getByRole("button", { name: "Start simulated session" }).click();
+  await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+  await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.getByText("Numerical report ready.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Measure", exact: true }).click();
   sendUpdate!();
@@ -64,8 +64,8 @@ for (const width of [1440, 390]) {
       socket.onMessage(() => socket.send(JSON.stringify({ type: "report", report })));
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Explore the demo" }).click();
-    await page.getByRole("button", { name: "Start simulated session" }).click();
+    await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+    await page.getByRole("button", { name: "Enable camera & start" }).click();
     const chart = page.getByRole("img", { name: "Accepted and preliminary heart-rate estimates over the session" });
     await expect(chart.locator('[data-series="Accepted"] circle')).toHaveCount(2);
     await expect(chart.locator('[data-series="Preliminary"] circle')).toHaveCount(1);
@@ -74,6 +74,17 @@ for (const width of [1440, 390]) {
     expect(path).not.toContain("L");
     await expect(page.getByText("2 accepted · 1 preliminary windows.", { exact: false })).toBeVisible();
     await expect(page.locator(".report-main-number")).toContainText("72");
+    await expect(page.getByRole("heading", { name: "Session report", exact: true })).toBeVisible();
+    const qualityHeading = page.getByRole("heading", { name: "Measurement quality", exact: true });
+    await expect(qualityHeading).toBeVisible();
+    for (const title of ["Your results", "Measurement timeline", "Health Insights", "Measurement quality & guidance details", "Technical capture details"]) {
+      const heading = page.getByRole("heading", { name: title, exact: true });
+      await expect(heading).toBeVisible();
+      const section = heading.locator("../..");
+      await expect(section.locator(":scope > header > p")).toBeVisible();
+      await expect(section.locator(":scope > .panel")).toBeVisible();
+      await expect(section.locator(":scope > details")).toHaveCount(0);
+    }
     await chart.locator('[data-series="Preliminary"] circle').hover();
     await expect(page.locator(".chart-tooltip")).toContainText("92.0 BPM · Preliminary");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -87,6 +98,7 @@ for (const width of [1440, 390]) {
     await page.screenshot({ path: `test-results/report-trend-${width}.png`, fullPage: true });
     await page.emulateMedia({ media: "print" });
     await expect(chart).toBeVisible();
+    await expect(qualityHeading).toBeVisible();
     await expect(page.getByText("○ Preliminary · amber, dashed")).toBeVisible();
   });
 }
@@ -97,8 +109,8 @@ test("a single preliminary estimate is visible without an accepted summary", asy
     socket.onMessage(() => socket.send(JSON.stringify({ type: "report", report })));
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Explore the demo" }).click();
-  await page.getByRole("button", { name: "Start simulated session" }).click();
+  await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+  await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.getByText("Insufficient usable signal", { exact: true })).toBeVisible();
   await expect(page.locator('[data-series="Preliminary"] circle')).toHaveCount(1);
   await expect(page.getByText("No heart-rate windows passed the report checks")).toHaveCount(0);
@@ -109,8 +121,8 @@ test("starting over marks an unfinished AI interpretation as stopped", async ({ 
     socket.onMessage(() => socket.send(JSON.stringify({ type: "report", report: pendingReport() })));
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Explore the demo" }).click();
-  await page.getByRole("button", { name: "Start simulated session" }).click();
+  await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+  await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.getByText("Numerical report ready.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Start a new measurement" }).click();
   await page.getByRole("button", { name: /Session reports/ }).click();
