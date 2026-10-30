@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Activity, ArrowRight, Camera, Check, ChevronRight, CircleHelp, Clock3, FileText,
   FlaskConical, Focus, Heart, Lightbulb, LoaderCircle, LockKeyhole, Maximize,
-  Play, Plus, RotateCcw, ShieldCheck, Sparkles, Square, Sun, Upload, Waves, X,
+  Play, Plus, RotateCcw, ShieldCheck, Sparkles, Square, Sun, Waves, X,
 } from "lucide-react";
 import { useMeasurement } from "@/lib/use-measurement";
 import { clockText, CoachingMode, decisionLabel, Mode, percent, Report } from "@/lib/types";
@@ -199,9 +199,6 @@ export function PulsePilot() {
               </section>
               <section className="conditions-panel"><h3>Your setup</h3>{conditions.map(({ title, icon: Icon, value, good }) => <div className="condition" key={title}><span><Icon size={16} />{title}</span><span className={good ? "condition-good" : current ? "condition-adjust" : ""}>{good && <Check size={13} />}{value}</span></div>)}</section>
             </div>
-          </div>
-          <div className="explore-row"><div><div className="explore-icon"><FlaskConical size={20} /></div><div><strong>Curious before turning on your camera?</strong><p>Explore a simulated session or use a recording you already have.</p></div></div>
-            <div className="explore-actions"><button className="text-button" disabled={busy} onClick={() => fileRef.current?.click()}><Upload size={15} />Use a recording</button><button className="secondary" disabled={busy} onClick={() => startSetup("simulation")}>Explore the demo<ArrowRight size={16} /></button></div>
           </div>
           <div className="measurement-footnote"><ShieldCheck size={14} /><p>For curiosity, not diagnosis. Signal quality does not guarantee heart-rate accuracy.</p><span>Powered by FacePhys</span></div>
           <input type="file" ref={fileRef} accept="video/*" hidden aria-label="Choose recorded video" onChange={e => { const selected = e.target.files?.[0]; if (selected) { setFile(selected); startSetup("recording"); } e.target.value = ""; }} />
