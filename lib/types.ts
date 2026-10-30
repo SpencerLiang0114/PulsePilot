@@ -55,6 +55,11 @@ export type HealthInsightBundle = {
   evidence: Record<string, string>; guidance_references: Record<string, { title: string; url: string | null }>;
   sufficient_evidence: boolean; graph_version: string; agent_event_id: string | null;
 };
+export type PulseVariability = {
+  status: "available" | "insufficient" | "simulation"; method: string; reason: string;
+  rmssd_ms: number | null; sdnn_ms: number | null; duration: number; interval_count: number;
+  rejected_intervals: number; interval_times: number[]; intervals_ms: number[];
+};
 export type Report = {
   id: string; created_at: string; mode: Mode; analyst: "deterministic" | "muse"; ai_status: string;
   stats: {
@@ -73,6 +78,7 @@ export type Report = {
   capture_diagnostics?: CaptureDiagnostics | null;
   health_context?: HealthContext;
   health_insights?: HealthInsightBundle | null;
+  pulse_variability?: PulseVariability;
 };
 export type Health = { status: string; weights_available: boolean; model_ready: boolean; model_error: string | null; busy: boolean; ai_configured: boolean; agent_mode?: AgentMode };
 

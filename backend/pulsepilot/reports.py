@@ -14,6 +14,7 @@ from .schemas import (
     Statistics,
 )
 from .sensing import ACTIONS, THRESHOLDS, issues
+from .variability import pulse_variability
 
 
 def statement(text: str, evidence: str, kind="fact") -> Statement:
@@ -157,6 +158,7 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         samples=[s.model_copy(update={"waveform": [], "waveform_times": []}) for s in samples],
         interventions=[i.model_copy(deep=True) for i in interventions], evidence=evidence,
         analysis=analysis, claims=claims, health_context=config.health_context,
+        pulse_variability=pulse_variability(samples, config.mode),
     )
 
     from .health_guidance import render_health_bundle
@@ -179,5 +181,6 @@ def measurement_evidence(report: Report) -> MeasurementEvidence:
         accepted_window_count=sum(s.usable and s.bpm is not None for s in report.samples),
         quality_warnings=warnings, activity_context=report.health_context.activity,
         concerning_symptoms=report.health_context.concerning_symptoms,
-        evidence_ids=("heart_rate", "quality", "source", "context", "symptoms"),
+        evidence_ids=("heart_rate", "quality", "source", "context", "symptoms", "pulse_variability"),
+        pulse_variability=report.pulse_variability,
     )
