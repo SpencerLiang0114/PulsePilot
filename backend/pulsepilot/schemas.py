@@ -51,6 +51,8 @@ class Sample(StrictModel):
     t: float
     bpm: float | None = None
     report_bpm: float | None = Field(default=None, ge=40, le=180)
+    display_bpm: float | None = Field(default=None, ge=40, le=180)
+    display_state: str | None = None
     sqi: float | None = None
     usable: bool = False
     state: str = "Measuring"

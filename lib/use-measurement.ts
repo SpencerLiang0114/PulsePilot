@@ -98,7 +98,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
       setStatus("finishing");
       statusRef.current = "finishing";
       releaseCamera();
-      setSample(current => current ? { ...current, bpm: null, usable: false } : null);
+      setSample(current => current ? { ...current, bpm: null, display_bpm: null, display_state: null, usable: false } : null);
     }
   }, [releaseCamera, stopWatchdog]);
 
@@ -324,7 +324,7 @@ export function useMeasurement(onReport: (report: Report) => void) {
             if (payload.camera) {
               setCamera(payload.camera);
               if (!payload.camera.face_visible || payload.camera.face_count !== 1)
-                setSample(current => current ? { ...current, bpm: null, usable: false, state: "Find your face", camera: payload.camera } : null);
+                setSample(current => current ? { ...current, bpm: null, display_bpm: null, display_state: null, usable: false, state: "Find your face", camera: payload.camera } : null);
             }
             if (heatmapTimeout.current !== null) window.clearTimeout(heatmapTimeout.current);
             setHeatmap(payload.heatmap);

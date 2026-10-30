@@ -39,11 +39,53 @@ async function camera(page: Page, delayPermission = false) {
 
 async function start(page: Page) {
   await page.getByRole("button", { name: "Start measurement", exact: true }).click();
-  await page.getByLabel("I agree to send video frames").check();
   await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.locator(".heart-value")).toHaveText("72BPM");
   await expect(page.locator(".measurement-state")).toHaveText("Signal stable");
 }
+
+test("windowed readings agree across displays and clear on face loss and finish", async ({ page }) => {
+  await camera(page);
+  let faceVisible = true;
+  let held = false;
+  await page.routeWebSocket("**/ws/measure", socket => {
+    let t = 10;
+    socket.onMessage(message => {
+      if (typeof message === "string") {
+        if (JSON.parse(message).type === "start") socket.send(JSON.stringify({ type: "ready" }));
+        return;
+      }
+      t += 1/30;
+      socket.send(JSON.stringify({ type: "ack" }));
+      socket.send(JSON.stringify({ type: "face_heatmap", t, heatmap: null,
+        camera: { ...accepted.camera, face_visible: faceVisible, face_count: faceVisible ? 1 : 0 } }));
+      socket.send(JSON.stringify({ type: "sample", interventions: [], sample: {
+        ...accepted, t, bpm: null, usable: false, sqi: held ? .1 : .4,
+        display_bpm: faceVisible ? 74 : null,
+        display_state: faceVisible ? held ? "Last estimate · 3s ago · reacquiring signal" : "Preliminary · 10s window" : null,
+        camera: { ...accepted.camera, face_visible: faceVisible },
+      } }));
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start measurement", exact: true }).click();
+  await page.getByRole("button", { name: "Enable camera & start" }).click();
+  await expect(page.locator(".heart-value")).toHaveText("74BPM");
+  await expect(page.locator(".camera-reading strong")).toHaveText("74.0");
+  await expect(page.locator(".measurement-state")).toHaveText("Preliminary · 10s window");
+  held = true;
+  await expect(page.locator(".measurement-state")).toContainText("3s ago");
+  await expect(page.locator(".camera-reading")).toContainText("3s ago");
+  await expect(page.locator(".heart-value")).toHaveText("74BPM");
+  faceVisible = false;
+  await expect(page.locator(".heart-value")).toHaveText("—BPM");
+  await expect(page.locator(".camera-reading strong")).toHaveText("—");
+  faceVisible = true;
+  await expect(page.locator(".heart-value")).toHaveText("74BPM");
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page.locator(".heart-value")).toHaveText("—BPM");
+  await expect(page.locator(".camera-reading")).toHaveCount(0);
+});
 
 test("live preview shows face tracking and signal, clears lost faces, and stops the camera", async ({ page }) => {
   await camera(page);

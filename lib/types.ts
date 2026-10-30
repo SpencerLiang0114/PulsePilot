@@ -14,6 +14,7 @@ export type CameraMetrics = {
 export type Sample = {
   t: number; bpm: number | null; sqi: number | null; usable: boolean; state: string;
   report_bpm?: number | null;
+  display_bpm?: number | null; display_state?: string | null;
   fps: number; latency_ms: number; camera: CameraMetrics; waveform: number[]; waveform_times?: number[];
   processing_ms?: number | null; inference_lag_ms?: number | null;
 };

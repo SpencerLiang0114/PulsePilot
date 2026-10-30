@@ -90,6 +90,8 @@ export function PulsePilot() {
   const measuring = m.status === "measuring";
   const liveVideo = measuring && m.mode !== "simulation";
   const current = measuring ? m.sample : null;
+  const displayedBpm = current?.display_bpm !== undefined ? current.display_bpm : current?.bpm;
+  const readingState = current?.display_state ?? current?.state;
   const camera = measuring ? m.camera ?? current?.camera : null;
   const faceBox = showHeatmap && m.heatmap ? m.heatmap.bbox : camera?.bbox;
   const active = measuring ? m.interventions.find(i => i.outcome === "observing") : undefined;
@@ -161,7 +163,7 @@ export function PulsePilot() {
                     <small id="heatmap-description">{!showHeatmap ? "Overlay off" : m.heatmap && (camera?.face_count ?? 0) <= 1 ? camera?.face_visible ? "FacePhys attention" : "Reacquiring face…" : "Waiting for face attention"}</small>
                     {showHeatmap && <span className="heatmap-legend"><span />Low · model attention · high</span>}
                   </div>
-                  <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{current?.usable && current.bpm != null ? current.bpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{current?.state ?? "Finding your face"}</span></div>
+                  <div className="camera-reading"><span>Estimated heart rate</span><div><strong>{displayedBpm != null ? displayedBpm.toFixed(1) : "—"}</strong><span>BPM</span></div><span>{readingState ?? "Finding your face"}</span></div>
                 </>}
                 <div className="camera-bottom"><span><LockKeyhole size={13} />Frames processed, never saved</span><span>{measuring ? `${Math.round(current?.fps ?? 0)} fps` : m.status === "connecting" ? "Preparing camera" : "Camera permission required"}</span></div>
               </div>
@@ -185,8 +187,8 @@ export function PulsePilot() {
             </div>
             <div className="insight-column">
               <section className="heart-panel"><div className="section-heading"><h3>Estimated heart rate</h3><Heart size={19} /></div>
-                <div className="heart-value">{current?.bpm ?? <span className="empty-dash">—</span>}<span>BPM</span></div>
-                <div className={`measurement-state ${current?.usable ? "good" : ""}`}><span />{current?.state ?? (m.status === "connecting" ? "Initializing" : "Not measuring")}</div>
+                <div className="heart-value">{displayedBpm ?? <span className="empty-dash">—</span>}<span>BPM</span></div>
+                <div className={`measurement-state ${(current?.display_state ? current.display_state.startsWith("10s window") : current?.usable) ? "good" : ""}`}><span />{readingState ?? (m.status === "connecting" ? "Initializing" : "Not measuring")}</div>
                 <div className="quality-meter"><div><span>Signal quality</span><strong>{percent(current?.sqi)}</strong></div><div className="meter-track"><span style={{ width: `${(current?.sqi ?? 0) * 100}%` }} /></div><p>{current?.sqi != null ? "Signal periodicity, not an accuracy score." : "We’ll show a number when there’s enough usable signal."}</p></div>
               </section>
               <section className="coach-panel"><div className="section-heading"><h3><Sparkles className="coach-symbol" size={18} />Your measurement coach</h3><span className="live-label">{measuring ? m.coachingMode === "passive" ? "Passive" : m.coachingState.toLowerCase() : "Ready"}</span></div>

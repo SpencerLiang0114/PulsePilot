@@ -95,3 +95,41 @@ def test_dominant_issue_and_acceptable_setup():
     bad.camera.face_visible = False
     bad.camera.brightness = 0
     assert issues(bad) == ["face"]
+
+
+def test_display_updates_every_ten_seconds_and_uses_recent_median():
+    gate = ReliabilityGate()
+    for t, bpm in [(10, 72), (10.5, 73), (11, 140), (18, 74), (19, 76)]:
+        assert gate.apply(good_sample(t=t), bpm, t).display_bpm == 72
+    sample = gate.apply(good_sample(t=20), 75, 20)
+    assert sample.display_bpm == 75
+    assert sample.bpm == 75 and sample.usable
+
+
+def test_preliminary_display_is_separate_from_accepted_statistics():
+    sample = good_sample(t=10, sqi=.4)
+    sample.camera.face_size = .75
+    result = ReliabilityGate().apply(sample, 72, 10)
+    assert result.display_bpm == 72
+    assert result.display_state == "Preliminary · 10s window"
+    assert result.bpm is None and not result.usable and result.report_bpm is None
+
+
+def test_quality_dip_holds_labeled_estimate_for_at_most_ten_seconds():
+    gate = ReliabilityGate()
+    assert gate.apply(good_sample(t=10), 72, 10).display_bpm == 72
+    held = gate.apply(good_sample(t=15, sqi=.1), 140, 15)
+    assert held.display_bpm == 72 and "5s ago" in held.display_state
+    assert held.bpm is None and not held.usable
+    assert gate.apply(good_sample(t=20, sqi=.1), 140, 20).display_bpm is None
+    assert gate.apply(good_sample(t=20.5, sqi=.4), 76, 20.5).display_bpm == 76
+
+
+@pytest.mark.parametrize("field,value", [("face_visible", False), ("face_count", 2),
+                                        ("brightness", 20), ("brightness", 240), ("motion", .5)])
+def test_display_clears_on_invalid_capture_even_with_a_recent_estimate(field, value):
+    gate = ReliabilityGate()
+    gate.apply(good_sample(t=10), 72, 10)
+    sample = good_sample(t=10.5)
+    setattr(sample.camera, field, value)
+    assert gate.apply(sample, 72, 10.5).display_bpm is None

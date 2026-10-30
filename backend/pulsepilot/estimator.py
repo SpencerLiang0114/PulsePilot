@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .pulse import pulse_estimate
 from .schemas import CameraMetrics, FaceHeatmap, Sample
 from .sensing import CameraSensing, ReliabilityGate
 
@@ -31,6 +32,7 @@ class FacePhysEstimator:
         self.last_timestamp = None
         self.epoch = None
         self.visible_since = None
+        self.last_face_seen = None
         self.timestamps = deque(maxlen=90)
         self.sensing = CameraSensing()
         self.camera = CameraMetrics()
@@ -102,6 +104,7 @@ class FacePhysEstimator:
             self.timestamps.clear()
             self.epoch = timestamp
             self.visible_since = None
+            self.last_face_seen = None
             self.sensing = CameraSensing()
             self.gate = ReliabilityGate()
         if self.start_time is None:
@@ -112,10 +115,15 @@ class FacePhysEstimator:
         self.timestamps.append(timestamp)
         detections = self.model.detector.detect(rgb)
         self.camera = self.sensing.assess(rgb, detections, timestamp)
-        if not self.camera.face_visible or self.camera.face_count != 1:
+        if self.camera.face_count > 1:
             self.visible_since = None
-        elif self.visible_since is None:
-            self.visible_since = timestamp
+            self.last_face_seen = None
+        elif self.camera.face_visible and self.camera.face_count == 1:
+            if self.last_face_seen is None or timestamp-self.last_face_seen > .25:
+                self.visible_since = timestamp
+            self.last_face_seen = timestamp
+        elif self.last_face_seen is None or timestamp-self.last_face_seen > .25:
+            self.visible_since = None
         self.model.update_frame(rgb, ts=timestamp)
         self.model.face_detection_task.result(timeout=5)
         if not self.model.ift.is_alive():
@@ -211,10 +219,8 @@ class FacePhysEstimator:
         if count >= 300:
             end = model.ts[count-1]-model.ts[0]
             start = max(0, end-10)
-            result = model.hr(start=start, end=end, return_hrv=False)
-            if result:
-                candidate, sqi = finite(result.get("hr")), finite(result.get("SQI"))
-                sqi = max(0, min(1, sqi)) if sqi is not None else None
+            values, _ = model.bvp(start=start, end=end, raw=True)
+            candidate, sqi = pulse_estimate(values[-300:])
         if count >= 60:
             end = model.ts[count-1]-model.ts[0]
             values, times = model.bvp(start=max(0, end-8), end=end)

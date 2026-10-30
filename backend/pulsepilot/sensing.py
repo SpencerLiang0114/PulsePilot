@@ -1,6 +1,7 @@
 import math
 from collections import deque
 from dataclasses import dataclass
+from statistics import median
 
 import numpy as np
 
@@ -158,6 +159,11 @@ class ReliabilityGate:
     def __init__(self):
         self.stable = False
         self.good_count = 0
+        self.display_candidates = deque()
+        self.display_bpm = None
+        self.display_updated = None
+        self.display_valid = None
+        self.display_preliminary = True
 
     def apply(self, sample: Sample, candidate: float | None, fresh_seconds: float) -> Sample:
         t = THRESHOLDS
@@ -180,4 +186,32 @@ class ReliabilityGate:
         sample.state = ("Signal stable" if self.stable else
                         "Adjust your position" if not camera_ok else
                         "Measuring" if fresh_seconds < t.min_window else "Low confidence")
+        # Position/size/angle advice should not erase a periodic pulse from a visible face.
+        display_safe = (not set(detected).intersection({"face", "visibility", "dark", "bright",
+                                                       "flicker", "motion", "cadence"})
+                        and fresh_seconds >= t.min_window and sample.fps >= t.min_fps)
+        if not display_safe:
+            self.display_candidates.clear()
+            self.display_bpm = self.display_updated = self.display_valid = None
+        else:
+            while self.display_candidates and self.display_candidates[0][0] < sample.t-2:
+                self.display_candidates.popleft()
+            if (candidate is not None and math.isfinite(candidate) and 40 <= candidate <= 180
+                    and sample.sqi is not None and sample.sqi >= t.report_sqi):
+                self.display_valid = sample.t
+                self.display_candidates.append((sample.t, candidate))
+                if self.display_updated is None or sample.t-self.display_updated >= 10:
+                    self.display_bpm = round(median(value for _, value in self.display_candidates), 1)
+                    self.display_updated = sample.t
+                    self.display_preliminary = not sample.usable
+            if self.display_updated is not None and sample.t-self.display_updated >= 10:
+                self.display_bpm = self.display_updated = self.display_valid = None
+                self.display_candidates.clear()
+        sample.display_bpm = self.display_bpm
+        if self.display_bpm is not None:
+            age = sample.t-self.display_updated
+            sample.display_state = (f"Last estimate · {age:.0f}s ago · reacquiring signal"
+                                    if self.display_valid != sample.t else
+                                    "Preliminary · 10s window" if self.display_preliminary else
+                                    "10s window · updates every 10s")
         return sample

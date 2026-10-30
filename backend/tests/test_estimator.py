@@ -215,3 +215,49 @@ def test_no_completed_inference_has_unavailable_lag():
     sample = estimator.snapshot()
     assert sample.bpm is None and not sample.usable
     assert sample.inference_lag_ms is None
+
+
+def test_snapshot_estimates_from_completed_raw_bvp_without_upstream_reshaping():
+    from test_sensing import good_sample
+
+    estimator = FacePhysEstimator()
+    estimator.start_time = estimator.epoch = estimator.visible_since = 0
+    estimator.last_timestamp = 10.1
+    estimator.camera = good_sample().camera
+    estimator.timestamps.extend(np.linspace(8, 10.1, 64))
+    times = np.arange(301)/30
+    bvp = np.sin(2*np.pi*1.2*times)
+    estimator.model = SimpleNamespace(
+        n_signal=301, ts=times.tolist(), signal_buff={"bvp": bvp.tolist()},
+        bvp=Mock(side_effect=lambda **kwargs: (bvp, times)),
+    )
+    sample = estimator.snapshot()
+    assert sample.display_bpm == pytest.approx(72, abs=1)
+    assert sample.sqi > .55
+    assert estimator.model.bvp.call_args_list[0].kwargs["raw"] is True
+
+
+def test_brief_detector_miss_does_not_restart_ten_second_acquisition():
+    box = np.array([100, 50, 220, 190])
+    points = np.array([[140, 100], [180, 100], [160, 120], [160, 145], [120, 115], [200, 115]])
+    faces = [(box, points, np.array([.98], dtype=np.float32))]
+    estimator = FacePhysEstimator()
+    estimator.model = SimpleNamespace(
+        detector=SimpleNamespace(detect=lambda rgb: faces), update_frame=lambda rgb, ts: None,
+        face_detection_task=SimpleNamespace(result=lambda timeout: None),
+        ift=SimpleNamespace(is_alive=lambda: True),
+    )
+    frame = np.full((240, 320, 3), 140, dtype=np.uint8)
+    estimator.push(frame, 1)
+    faces.clear()
+    estimator.push(frame, 1.1)
+    assert estimator.visible_since == 1
+    assert not estimator.camera.face_visible
+    faces.append((box, points, np.array([.98], dtype=np.float32)))
+    estimator.push(frame, 1.2)
+    assert estimator.visible_since == 1
+    faces.clear()
+    estimator.push(frame, 1.3)
+    estimator.push(frame, 1.4)
+    estimator.push(frame, 1.5)
+    assert estimator.visible_since is None

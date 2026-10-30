@@ -26,6 +26,16 @@ The upstream repository has no Python packaging metadata. Fetch its pinned commi
 
 Require at least ten seconds of fresh data and acceptable capture cadence, face visibility, lighting, motion, and periodicity before showing an estimate. Keep raw candidate HR separate from accepted HR. Short/invalid windows yield `null`, never a plausible default.
 
+## Stable ten-second readings
+
+PulsePilot now estimates BPM from the last 300 completed raw FacePhys BVP samples (ten seconds at the model's 30 Hz). The adapter removes linear drift, applies a zero-phase 0.5–3 Hz bandpass, and selects the strongest 40–180 BPM Welch spectral peak using the full window. It avoids upstream's peak-by-peak amplitude normalization. SQI is now autocorrelation near that selected period on the same filtered signal, rather than upstream's maximum autocorrelation on raw BVP. Thresholds remain heuristic; the changed SQI is not directly comparable to earlier exports and is not an accuracy probability. Weights and camera crops are unchanged.
+
+The camera overlay and main BPM card share `display_bpm` and `display_state`. A first eligible estimate appears after acquisition, then the number refreshes every ten seconds using the median of eligible estimates from the preceding two seconds. Eligibility requires a fresh window, at least 24 capture FPS, SQI ≥0.35, a finite 40–180 BPM candidate, one visible unobstructed face, and acceptable brightness, flicker, and motion. Size, centering, angle, and light-imbalance advice continues without erasing the display. These less strict readings are labeled preliminary; they do not become accepted samples or enter accepted report statistics. The accepted gate and report-only preliminary gate retain their existing thresholds and camera checks, using the revised estimator outputs.
+
+During a quality dip, the display labels the last estimate with its age and clears it once it is ten seconds old. Face loss, multiple faces, invalid capture conditions, inference lag, finish, and transport failures clear the display. A detector miss of at most 250 ms does not reset the acquisition timeline, although the reading is hidden while the face is absent. Longer misses and multiple faces require a new ten-second window. Thus the application reduces avoidable gaps; it cannot promise a number when no valid pulse is available.
+
+Synthetic regression tests cover known 42–175 BPM signals with noise and slow illumination drift, broadband-noise rejection, display cadence and expiry, camera rejection, and brief tracking misses. These establish processing and display behavior, not improved real-camera/reference-device accuracy. A paired reference-device recording is still needed to assess accuracy and tune the new quality score.
+
 ## Live face heatmap
 
 The camera/recording preview has a **Face heatmap** switch showing the FacePhys demo's first attention projection (`fm1`). The public `proj.tflite` graph takes `state_in_8`, reshapes it to 1×36×36×32, and averages the final (channel) axis. In the pinned Python model this is `state[0][1]["tn"]["x2mean"]`. We compute this reduction directly from the existing model state at the full 36×36 resolution. There is no square root, percentile normalization, RGB color-change extraction, or second inference model.
