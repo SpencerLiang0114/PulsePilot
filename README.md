@@ -42,7 +42,7 @@ META_MODEL=muse-spark-1.3
 AGENT_MODE=assist
 ```
 
-AI requests also require explicit consent in the session setup dialog. Without a key or consent, deterministic measurement, guidance, and reports remain available. Keep credentials out of frontend code and `NEXT_PUBLIC_` variables.
+Starting a session enables Muse Spark coaching and report insights when configured, with no additional setup checkboxes. Without a key or enabled agents, deterministic measurement, guidance, and reports remain available. Keep credentials out of frontend code and `NEXT_PUBLIC_` variables.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ flowchart TD
     Coach --> Report
     Coach -->|Decision / explanation events| Graphs[LangGraph coaching and report workflows]
     Report -->|Evidence events| Graphs
-    Graphs -->|Consented structured metrics| Muse[Meta Muse Spark]
+    Graphs -->|Structured metrics| Muse[Meta Muse Spark]
     Muse -->|Action proposals / claim references| Graphs
     Graphs -->|Validated results or fallback| API
     API -->|ACKs, samples, coaching, reports| Browser
@@ -84,13 +84,13 @@ Configure `AGENT_MODE` in `backend/.env` or the backend process environment:
 | `assist` | Rules select actions; timely validated Muse explanations and report selections are allowed. **Default.** |
 | `adaptive` | Validated Muse proposals may select a currently eligible action before MeasurementCoach commits it. |
 
-Each session independently chooses `passive`, `rules`, or `meta` coaching. Passive never produces instructions; rules never requests model coaching. Separately consented report analysis may still run in enabled modes. Adaptive action selection requires both `AGENT_MODE=adaptive` and the session's Meta preference and consent.
+The setup screen uses `meta` coaching automatically. The protocol still supports `passive` and `rules` for direct clients. Adaptive action selection requires `AGENT_MODE=adaptive` and enabled AI for the session.
 
 ## Health Insights
 
-Completed native reports include a separate Health Insights section with deterministic guidance, measurement evidence, sources, and accuracy limitations. Simulated or insufficient measurements do not produce personal heart-rate interpretations. Optional resting context is user-declared; symptom guidance is deterministic and appears before measurement as well as in reports.
+Completed native reports include a separate Health Insights section with deterministic guidance, measurement evidence, sources, and accuracy limitations. Simulated or insufficient measurements do not produce personal heart-rate interpretations. The setup leaves activity context unknown; symptom guidance is deterministic and appears before measurement as well as in reports.
 
-The separate **Allow Muse Spark to select Health Insights** checkbox authorizes transfer of accepted statistics, quality, provenance, and supplied activity/symptom context. Existing frame or coaching consent does not authorize this transfer. Muse can select only eligible server-authored guidance. Its independent 12-second workflow updates the matching report without delaying numerical results or P2 analysis. JSON export includes the bundle.
+Starting a session enables Health Insights selection when Muse Spark is available, sending accepted statistics, quality, provenance, and supplied activity/symptom context. Muse can select only eligible server-authored guidance. Its independent 12-second workflow updates the matching report without delaying numerical results or P2 analysis. JSON export includes the bundle.
 
 See [Health Insights contracts, policy, and evaluation](docs/p3-health-insights.md). Clinical expert review, reference-device accuracy validation, and hardware report adapters remain outstanding.
 
@@ -135,6 +135,6 @@ For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-i
 
 ## Privacy and limits
 
-Video frames go to the configured inference service with consent and are discarded after processing. Muse receives only separately consented numerical summaries and intervention history; it never receives images. Reports stay in browser memory for the page session and can be exported as JSON or printed. External tracing is disabled.
+Starting a camera or recording session sends video frames to the configured inference service, which discards them after processing. When available, Muse receives numerical summaries, intervention history, and supplied activity/symptom context; it never receives images. Reports stay in browser memory for the page session and can be exported as JSON or printed. External tracing is disabled.
 
 PulsePilot is a research application, not a medical device. Signal periodicity and before/after quality changes do not establish heart-rate accuracy or causal coaching benefit. Real-camera validation is limited to the [three-session local self-test](docs/p4-real-camera.md); low-light robustness, synchronized reference accuracy, multi-user benefit, and durable hosting remain unverified. The pinned upstream source and checkpoint have distinct licensing considerations; see [FacePhys integration](docs/facephys-integration.md#licensing-limitation).

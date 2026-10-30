@@ -19,20 +19,22 @@ const intervention: Intervention = {
   before_camera: {}, after_camera: {}, environmental_changes: {},
 };
 
-for (const mode of ["passive", "rules", "meta"] as CoachingMode[]) {
-  test(`setup sends ${mode} coaching mode and explicit consent`, async ({ page }) => {
-    let start: { coaching: CoachingMode; ai_consent: boolean } | undefined;
-    await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: true } }));
+for (const aiAvailable of [true, false]) {
+  test(`setup defaults to Muse Spark with AI availability ${aiAvailable}`, async ({ page }) => {
+    let start: { coaching: CoachingMode; ai_consent: boolean; health_ai_consent: boolean } | undefined;
+    await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: aiAvailable } }));
     await page.routeWebSocket("**/ws/measure", socket => socket.onMessage(message => {
       if (typeof message === "string") start = JSON.parse(message);
     }));
     await page.goto("/");
     await page.getByRole("button", { name: "Explore the demo" }).click();
-    await page.getByLabel("Measurement coaching", { exact: true }).selectOption(mode);
-    if (mode === "meta") await page.getByLabel("Let Muse Spark").check();
+    await expect(page.getByRole("dialog").getByText("Muse Spark", { exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByRole("dialog").getByRole("checkbox")).toHaveCount(0);
     await page.getByRole("button", { name: "Start simulated session" }).click();
-    await expect.poll(() => start?.coaching).toBe(mode);
-    expect(start?.ai_consent).toBe(mode === "meta");
+    await expect.poll(() => start?.coaching).toBe("meta");
+    expect(start?.ai_consent).toBe(aiAvailable);
+    expect(start?.health_ai_consent).toBe(aiAvailable);
   });
 }
 
@@ -50,7 +52,6 @@ test("live decisions wait for commitment and report timeline preserves provenanc
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Explore the demo" }).click();
-  await page.getByLabel("Let Muse Spark").check();
   await page.getByRole("button", { name: "Start simulated session" }).click();
   await expect(page.getByText("Simulation · 1× playback")).toBeVisible();
   await expect(page.getByText("Choosing a useful adjustment… Measurement continues.")).toBeVisible();
@@ -98,7 +99,6 @@ test("assisted explanations preserve the committed rules action and provenance",
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Explore the demo" }).click();
-  await page.getByLabel("Let Muse Spark").check();
   await page.getByRole("button", { name: "Start simulated session" }).click();
   await expect(page.getByText(intervention.action, { exact: true })).toBeVisible();
   send!({ type: "sample", sample: { ...sample, t: 5.5 }, interventions: [{ ...intervention, decision_source: "rules", source: "rules" }], coaching_state: "ACTING" });
@@ -106,9 +106,10 @@ test("assisted explanations preserve the committed rules action and provenance",
   await expect(page.getByText(intervention.action, { exact: true })).toBeVisible();
 });
 
-test("disabled orchestration keeps the AI consent control unavailable", async ({ page }) => {
+test("disabled orchestration keeps Muse Spark as the only displayed coach", async ({ page }) => {
   await page.route("**/health", route => route.fulfill({ json: { status: "ok", ai_configured: true, agent_mode: "off" } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Explore the demo" }).click();
-  await expect(page.getByLabel("Let Muse Spark")).toBeDisabled();
+  await expect(page.getByRole("dialog").getByText("Muse Spark", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
 });

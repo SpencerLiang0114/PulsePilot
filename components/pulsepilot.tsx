@@ -33,12 +33,7 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [duration, setDuration] = useState(60);
-  const [consent, setConsent] = useState(false);
-  const [aiConsent, setAiConsent] = useState(false);
-  const [healthAiConsent, setHealthAiConsent] = useState(false);
-  const [resting, setResting] = useState(false);
   const [symptoms, setSymptoms] = useState(false);
-  const [coaching, setCoaching] = useState<CoachingMode>("meta");
   useEffect(() => {
     const opener = document.activeElement;
     const dialog = dialogRef.current;
@@ -61,24 +56,15 @@ function ConsentDialog({ mode, onClose, onStart, aiAvailable, fileName }: {
     <div className="duration-options" id="duration" role="group" aria-label="Measurement length">
       {[30, 60, 90].map(n => <button key={n} aria-pressed={duration === n} className={duration === n ? "selected" : ""} onClick={() => setDuration(n)}>{n} seconds{n === 60 && <span>Recommended</span>}</button>)}
     </div>
-    <label className="field-label" htmlFor="coaching-mode">Measurement coaching</label>
-    <select id="coaching-mode" value={coaching} onChange={e => setCoaching(e.target.value as CoachingMode)}>
-      <option value="meta">Muse Spark · validated guidance with your consent</option>
-      <option value="rules">Rules · deterministic guidance</option>
-      <option value="passive">Passive · observe without instructions</option>
-    </select>
-    {mode !== "simulation" && <label className="check-label"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to send video frames to the inference service for this measurement.<small>Frames are processed in memory and discarded. Audio is never captured. Reports stay in this page until exported.</small></span></label>}
-    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={aiConsent} disabled={!aiAvailable} onChange={e => setAiConsent(e.target.checked)} /><span>Let Muse Spark assist with guidance and interpret my measurement metrics.<small>{aiAvailable ? "Only numerical summaries and guidance history go to Meta. No images. Without consent, Muse mode uses rules." : "Available when a Meta API key is configured and agents are enabled. Deterministic guidance and reports work now."}</small></span></label>
+    <span className="field-label">Measurement coaching</span>
+    <p><strong>Muse Spark</strong> · Guides your measurement and explains your results.</p>
     {mode !== "simulation" && <>
-      <label className="check-label"><input type="checkbox" checked={resting} onChange={e => setResting(e.target.checked)} /><span>This measurement is at rest: calm, seated or lying down, and not exercising.<small>Optional context; otherwise activity remains unknown.</small></span></label>
       <label className="check-label"><input type="checkbox" checked={symptoms} onChange={e => setSymptoms(e.target.checked)} /><span>I am currently experiencing chest pain, severe shortness of breath, or fainting.</span></label>
       {symptoms && <p role="alert">Seek emergency medical help now; call your local emergency number. Do not wait for a measurement or AI response. <a href="https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack" target="_blank" rel="noreferrer">American Heart Association guidance</a></p>}
     </>}
-    <label className={`check-label ${!aiAvailable ? "disabled" : ""}`}><input type="checkbox" checked={healthAiConsent} disabled={!aiAvailable} onChange={e => setHealthAiConsent(e.target.checked)} /><span>Allow Muse Spark to select Health Insights for this report.<small>Separate consent: send accepted heart-rate statistics, signal quality, measurement source, and any activity or symptom context above to Meta. No images or saved health history. Without consent, Health Insights use deterministic guidance.</small></span></label>
-    <button className="primary wide" disabled={mode !== "simulation" && !consent} onClick={() => onStart(duration, aiConsent, coaching, healthAiConsent, resting, symptoms)}>
+    <button className="primary wide" onClick={() => onStart(duration, aiAvailable, "meta", aiAvailable, false, symptoms)}>
       {mode === "simulation" ? <Play size={17} /> : <Camera size={18} />}{mode === "simulation" ? "Start simulated session" : mode === "recording" ? "Process recording" : "Enable camera & start"}
     </button>
-    <p className="dialog-footnote">For research and personal observation. Not a medical device.</p>
   </dialog>;
 }
 

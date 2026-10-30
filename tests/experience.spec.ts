@@ -9,7 +9,6 @@ test("desktop simulation completes, preserves evidence, exports, and keeps histo
   await page.screenshot({ path: "test-results/desktop.png", fullPage: true });
   await page.getByRole("button", { name: "Explore the demo" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByLabel("Let Muse Spark")).toBeDisabled();
   await page.getByRole("button", { name: "Start simulated session" }).click();
   await expect(page.getByText("Simulation · 4× playback")).toBeVisible();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
@@ -56,19 +55,16 @@ test("a user-selected recording runs through FacePhys and finishes at end of vid
   await page.locator('input[type="file"]').setInputFiles({
     name: "synthetic-test-recording.webm", mimeType: "video/webm", buffer: Buffer.from(recording),
   });
-  await page.getByLabel("I agree to send video frames").check();
   await page.getByRole("button", { name: "Process recording" }).click();
   await expect(page.getByText("Measurement complete", { exact: true })).toBeVisible({ timeout: 80000 });
   await expect(page.getByText("Insufficient usable signal", { exact: true })).toBeVisible();
   await expect(page.getByText("Video recording", { exact: false }).first()).toBeVisible();
 });
 
-test("camera consent is required and cancelled setup leaves no measurement", async ({ page }) => {
+test("camera setup is ready to start and cancelling leaves no measurement", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start measurement", exact: true }).click();
   const start = page.getByRole("button", { name: "Enable camera & start" });
-  await expect(start).toBeDisabled();
-  await page.getByLabel("I agree to send video frames").check();
   await expect(start).toBeEnabled();
   await page.getByRole("button", { name: "Close setup" }).click();
   await expect(page.getByRole("button", { name: "Start measurement", exact: true })).toBeFocused();
@@ -116,7 +112,6 @@ test("real FacePhys accepts browser frames from a synthetic test camera and stop
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Start measurement", exact: true }).click();
-  await page.getByLabel("I agree to send video frames").check();
   await page.getByRole("button", { name: "Enable camera & start" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible({ timeout: 80000 });
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", /[2-9]|1[0-9]/, { timeout: 20000 });

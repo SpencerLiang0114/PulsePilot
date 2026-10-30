@@ -42,10 +42,6 @@ async function setup(page: Page) {
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Explore the demo" }).click();
-  const consent = page.getByLabel("Allow Muse Spark to select Health Insights");
-  await expect(consent).toBeEnabled();
-  await expect(consent).not.toBeChecked();
-  await consent.check();
   await page.getByRole("button", { name: "Start simulated session" }).click();
   await expect(page.getByRole("heading", { name: "Health Insights", exact: true })).toBeVisible();
   return { send, close, start: () => start };
@@ -60,7 +56,7 @@ for (const first of ["health", "analysis"]) {
   test(`independent ${first} completion preserves both results and JSON export`, async ({ page }) => {
     const ws = await setup(page);
     expect(ws.start()?.health_ai_consent).toBe(true);
-    expect(ws.start()?.ai_consent).toBe(false);
+    expect(ws.start()?.ai_consent).toBe(true);
     const region = page.getByRole("region", { name: "Health Insights" });
     await expect(region.getByText(/selection pending/)).toBeVisible();
     await expect(region.getByText(/Insufficient evidence/)).toBeVisible();
@@ -127,13 +123,12 @@ test("late health selection updates history without navigating", async ({ page }
   await expect(page.getByText(/AI-selected suggestions/)).toBeVisible();
 });
 
-test("symptom advice appears immediately without waiting for consent or measurement", async ({ page }) => {
+test("symptom advice appears immediately without waiting for measurement", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start measurement", exact: true }).click();
   await page.getByLabel("I am currently experiencing chest pain").check();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Seek emergency medical help now");
-  await expect(page.getByLabel("Allow Muse Spark to select Health Insights")).not.toBeChecked();
-  await expect(page.getByLabel("This measurement is at rest")).not.toBeChecked();
+  await expect(page.getByRole("dialog").getByRole("checkbox")).toHaveCount(1);
 });
 
 
