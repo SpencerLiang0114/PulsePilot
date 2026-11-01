@@ -130,7 +130,7 @@ export function PulsePilot() {
     <div className="workspace">
       <main id="main-content" tabIndex={-1}>
         {view === "measure" && <>
-          <div className="page-heading"><div><h1>Find your steady signal.</h1><p>A quiet moment, your camera, and a little guidance.</p></div>
+          <div className="page-heading"><div><h1>Estimate your heart rate with your webcam.</h1><p>Get live guidance to improve your signal, then review your heart-rate trends, measurement quality, and session insights.</p></div>
             <button className="service-indicator" onClick={() => void m.refreshHealth()} title="Refresh service status"><span className={m.health ? "online" : ""} />{m.health ? m.health.model_ready ? "Inference ready" : "Service connected" : "Service offline"}<RotateCcw size={12} /></button>
           </div>
           {m.error && <div className="error-banner" role="alert"><div><strong>Let’s get you connected.</strong><p>{m.error}</p></div><button className="secondary small" onClick={() => startSetup(m.mode)}>Try again</button></div>}
@@ -212,13 +212,59 @@ export function PulsePilot() {
           {reports.length === 0 ? <div className="empty-reports"><FileText size={40} strokeWidth={1.2} /><h2>Your first report starts with a moment.</h2><p>Complete a measurement to see your heart rate, signal quality, and the difference each adjustment made.</p><button className="primary" onClick={reset}>Go to measurement<ArrowRight size={16} /></button></div> :
             <div className="report-list">{reports.map(report => <button key={report.id} className="report-card" onClick={() => setSelectedReport(report.id)}><div className="report-card-icon">{report.mode === "simulation" ? <FlaskConical /> : <Activity />}</div><div><h3>{report.mode === "simulation" ? "Simulated measurement" : "Heart-rate measurement"}</h3><p>{new Date(report.created_at).toLocaleString()} · {clockText(report.stats.duration)}</p></div><div className="report-card-bpm">{report.stats.mean_bpm ?? "—"}<span>BPM</span></div><span className="report-card-quality">{percent(report.stats.usable_fraction)} usable</span><ChevronRight size={20} /></button>)}</div>}
         </>)}
-        {view === "about" && <div className="about-view"><div className="page-heading"><div><h1>A pulse, seen in a new light.</h1><p>What PulsePilot measures, and what it can’t tell you.</p></div></div>
-          <div className="about-intro"><div className="about-visual"><FaceGuide active /></div><div><h2>Small changes.<br />A signal worth understanding.</h2><p>With each heartbeat, subtle changes in blood volume affect the light reflected by your face. FacePhys looks for that pattern in camera frames to estimate your pulse.</p><p>Lighting, motion, and camera timing all matter. PulsePilot checks those conditions, offers one correction at a time, and compares the signal before and after you adjust.</p></div></div>
-          <div className="about-steps">{[
-            [Camera, "Capture with consent", "Your browser sends frames to the inference service. Audio is never captured, and raw frames are not saved."],
-            [Focus, "Find a usable signal", "The frozen FacePhys model extracts a pulse waveform. Camera checks and signal periodicity decide whether to display an estimate."],
-            [Sparkles, "Understand the session", "Reports use measured statistics and recorded interventions. Muse Spark can interpret numerical evidence when configured and you opt in."],
-          ].map(([Icon, title, text], i) => { const Component = Icon as typeof Camera; return <section key={i}><Component size={24} /><h3>{title as string}</h3><p>{text as string}</p></section>; })}</div>
+        {view === "about" && <div className="about-view"><div className="page-heading"><div><h1>How PulsePilot works.</h1><p>PulsePilot is a research prototype that estimates your heart rate from webcam video. It combines live measurement coaching with session reports to help you explore your pulse and understand the quality of each recording.</p></div></div>
+          <div className="about-intro"><div className="about-visual"><FaceGuide active /></div><div><h2>From camera video<br />to pulse estimates.</h2><p>With each heartbeat, subtle changes in blood volume affect the light reflected by your face. FacePhys looks for that pattern in camera frames to estimate your pulse.</p><p>Lighting, motion, and camera timing all matter. PulsePilot checks those conditions, offers one correction at a time, and compares the signal before and after you adjust.</p></div></div>
+          <section className="about-section" aria-labelledby="architecture-title">
+            <h2 id="architecture-title">The architecture at a glance.</h2>
+            <p>The React / Next.js workspace handles capture, live charts, and report export. A WebSocket connects it to a persistent Python / FastAPI service for sensing and session control.</p>
+            <figure className="architecture-diagram">
+              <figcaption>Continuous measurement</figcaption>
+              <ol className="architecture-flow">{[
+                ["Browser capture", "Camera or recorded video"],
+                ["FastAPI service", "Timestamped video frames"],
+                ["FacePhys / JAX", "Pulse waveform extraction"],
+                ["Signal validation", "Heart rate + quality checks"],
+                ["Live workspace", "Readings, charts, and report"],
+              ].map(([title, detail], i) => <li key={title}><strong>{title}</strong><span>{detail}</span>{i < 4 && <ArrowRight className="flow-arrow" size={18} aria-hidden="true" />}</li>)}</ol>
+              <p>Frames are processed by the configured inference service and discarded. Audio is never captured.</p>
+            </figure>
+            <figure className="architecture-diagram agent-diagram">
+              <figcaption>Event-driven guidance</figcaption>
+              <ol className="architecture-flow agent-flow">{[
+                ["Session context", "Quality, evidence, and history"],
+                ["LangGraph + Muse Spark", "Propose or select a response"],
+                ["Server validation", "Check identity and evidence"],
+                ["Guidance and insights", "Validated result or rules fallback"],
+              ].map(([title, detail], i) => <li key={title}><strong>{title}</strong><span>{detail}</span>{i < 3 && <ArrowRight className="flow-arrow" size={18} aria-hidden="true" />}</li>)}</ol>
+              <p>Coaching and report events trigger optional model requests while measurement continues. Muse receives numerical summaries and session context; camera images and waveforms stay out of those requests.</p>
+            </figure>
+          </section>
+          <section className="about-section" aria-labelledby="agents-title">
+            <h2 id="agents-title">How the agentic system works.</h2>
+            <p>Three LangGraph workflows coordinate Meta Muse Spark assistance. Each has a defined task, a server validation step, and a deterministic fallback.</p>
+            <dl className="agent-workflows">
+              <div><dt><Focus size={20} />Measurement coach</dt><dd>Uses lighting, motion, face position, and recent adjustment outcomes. In the default assist mode, rules choose the action and Muse can explain it. Adaptive mode lets Muse propose a choice from the currently eligible actions.</dd></div>
+              <div><dt><FileText size={20} />Session analyst</dt><dd>Selects report claims tied to measured statistics and recorded adjustments. The server checks each claim against its evidence and renders the factual text.</dd></div>
+              <div><dt><Sparkles size={20} />Health Insights</dt><dd>Selects from server-authored guidance using measurement quality and supplied activity or symptom context. Evidence checks determine which guidance is eligible.</dd></div>
+            </dl>
+            <p className="architecture-note">The server controls measurement thresholds and adjustment timing. Invalid or late AI responses fall back to rules. The numerical report arrives before optional AI analysis, and sensing, coaching, and reports remain available when AI is unavailable.</p>
+          </section>
+          <section className="about-section" aria-labelledby="facephys-title">
+            <h2 id="facephys-title">Inside the FacePhys model.</h2>
+            <p>FacePhys learns an evolving pulse state from facial video. Its temporal-spatial state-space duality combines 2D convolutions for spatial features with a state-space model for changes over time.</p>
+            <figure className="architecture-diagram model-diagram">
+              <figcaption>Simplified streaming model</figcaption>
+              <ol className="architecture-flow model-flow">{[
+                ["Face crop", "36 × 36 RGB input"],
+                ["Spatial + temporal blocks", "Normalization, 2D convolutions, and state-space updates"],
+                ["Pooling + prediction head", "Combine features into a pulse estimate"],
+                ["Pulse waveform", "One BVP output per frame"],
+              ].map(([title, detail], i) => <li key={title}><strong>{title}</strong><span>{detail}</span>{i < 3 && <ArrowRight className="flow-arrow" size={18} aria-hidden="true" />}</li>)}</ol>
+              <p className="model-state"><RotateCcw size={18} aria-hidden="true" />Updated state carries temporal information into the next frame.</p>
+            </figure>
+            <div className="model-explanation"><p>Temporal normalization reduces drift and standardizes changing features. Complex-valued state transitions represent rhythmic patterns. Reusing the state supports frame-by-frame inference without retaining an ever-growing video history.</p><p>PulsePilot runs the pretrained <strong>FacePhys.rlap</strong> checkpoint in Python / JAX at a 30 Hz model cadence, without retraining. PulsePilot then uses a ten-second waveform window and quality checks to derive heart-rate estimates.</p></div>
+            <p className="architecture-source">Model schematic summarized from Figure 3 and Sections 3.1–3.5 of <a href="https://arxiv.org/html/2512.06275v1#S3" target="_blank" rel="noreferrer">FacePhys: State of the Heart Learning (Wang et al., 2025)</a>. Integration details follow the <a href="https://github.com/KegangWangCCNU/open-rppg/tree/4d24237e7b14e17429b49d0334f2282b7d2fd159" target="_blank" rel="noreferrer">pinned open-rPPG implementation</a>.</p>
+          </section>
           <section className="about-limits"><Lightbulb size={22} /><div><h3>A good signal is only part of the picture.</h3><p>This research prototype has not been clinically validated. A steady waveform or high signal-quality score does not prove an accurate heart rate. Reports do not diagnose conditions, and changes in the estimates are not confirmed physiological changes.</p><p>Head angle and visibility are approximated from six face landmarks. SAM segmentation is not used in this version. Synthetic demos test the software experience, not sensing accuracy.</p></div></section>
           <button className="primary" onClick={reset}>Try a measurement<ArrowRight size={16} /></button>
         </div>}

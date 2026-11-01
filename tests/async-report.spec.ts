@@ -32,7 +32,7 @@ test("late AI interpretation updates history without navigating away", async ({ 
   await expect(page.getByText("Numerical report ready.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Measure", exact: true }).click();
   sendUpdate!();
-  await expect(page.getByRole("heading", { name: "Find your steady signal." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Estimate your heart rate with your webcam." })).toBeVisible();
   await page.getByRole("button", { name: /Session reports/ }).click();
   await page.getByRole("heading", { name: "Simulated measurement" }).click();
   await expect(page.getByText("Selected by Muse Spark from server-validated session evidence")).toBeVisible();

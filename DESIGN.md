@@ -221,6 +221,10 @@ The camera area has a forest-green heading and capture field. Before a session, 
 - **Don't** present the FacePhys heatmap as a blood-flow or heart-rate visualization; it shows model attention.
 - **Don't** fill empty charts or readings with invented values.
 
+## How it works
+
+The explainer follows the project introduction with separate measurement and event-driven guidance flows, three agent workflow descriptions, and a simplified FacePhys streaming-model schematic. Flow nodes use the existing mint and forest palette, with arrows showing data direction. At 800px and below, the flows stack vertically. Paper and pinned implementation links stay beside the model explanation; the diagram distinguishes FacePhys waveform extraction from PulsePilot's heart-rate and quality processing.
+
 ## Session reports
 
 Reports use a centered 1120px reading width and a mint visual treatment inspired by the supplied FacePhys report. The shared colors are deep green ink `#263f39`, muted green `#536e66`, mint `#d9f0e9`, pale sage `#e5f3e5`, translucent white surfaces, and green actions `#26755f`. The workspace, dialogs, navigation, and report list use this same green family; forest `#173f35` anchors dark surfaces and mint `#9fd8bf` highlights them. Manrope remains the typeface, with large tabular measurements and compact supporting labels.

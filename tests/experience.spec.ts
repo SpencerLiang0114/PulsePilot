@@ -5,7 +5,7 @@ test("desktop simulation completes, preserves evidence, exports, and keeps histo
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Find your steady signal." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Estimate your heart rate with your webcam." })).toBeVisible();
   await page.screenshot({ path: "test-results/desktop.png", fullPage: true });
   await page.getByRole("button", { name: "Explore the demo" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -78,7 +78,7 @@ test("mobile has no horizontal overflow and navigation works", async ({ page }) 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
   await page.getByRole("button", { name: "How it works", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "A pulse, seen in a new light." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How PulsePilot works." })).toBeVisible();
   await page.getByRole("button", { name: "Session reports", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your first report starts with a moment." })).toBeVisible();
 });

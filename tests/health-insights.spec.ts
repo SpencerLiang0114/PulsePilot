@@ -147,7 +147,7 @@ test("late health selection updates history without navigating", async ({ page }
   const ws = await setup(page);
   await page.getByRole("button", { name: "Measure", exact: true }).click();
   ws.send(update());
-  await expect(page.getByRole("heading", { name: "Find your steady signal." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Estimate your heart rate with your webcam." })).toBeVisible();
   await page.getByRole("button", { name: /Session reports/ }).click();
   await page.getByRole("heading", { name: "Simulated measurement" }).click();
   await expect(page.getByText(/AI-selected suggestions/)).toBeVisible();
