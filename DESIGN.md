@@ -223,7 +223,11 @@ The camera area has a forest-green heading and capture field. Before a session, 
 
 ## How it works
 
-The explainer follows the project introduction with separate measurement and event-driven guidance flows, three agent workflow descriptions, and a simplified FacePhys streaming-model schematic. Flow nodes use the existing mint and forest palette, with arrows showing data direction. At 800px and below, the flows stack vertically. Paper and pinned implementation links stay beside the model explanation; the diagram distinguishes FacePhys waveform extraction from PulsePilot's heart-rate and quality processing.
+The explainer opens with a two-column hero: a 38–56px Manrope heading, a short introduction, and a forest-green camera-to-waveform illustration explicitly labeled as an illustration. A visible section navigation links to measurement, AI guidance, the FacePhys model, and limitations. The measurement introduction pairs the sensing explanation with three ordered steps: capture, improve, and review.
+
+Section headings occupy the narrower left column and introductions sit in the wider right column. Technical diagrams span both columns, using open flow nodes with mint rules and directional arrows instead of nested cards. Measurement and event-driven guidance remain separate. Three agent descriptions sit in equal columns on desktop, with their validation and fallback explanation beneath. The FacePhys diagram retains its dark forest surface and distinguishes waveform extraction from PulsePilot's heart-rate and quality processing. Paper and pinned implementation links follow the model explanation.
+
+Body copy uses 16px Manrope with 1.7–1.75 line height; diagram text uses 14px and source notes use 13px. At 800px and below, technical flows and agent descriptions stack. At 520px and below, the hero, section introductions, model explanation, and final call to action stack. All technical details and limitations remain visible. A closing call to action returns to the measurement workspace.
 
 ## Session reports
 

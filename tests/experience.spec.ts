@@ -79,6 +79,11 @@ test("mobile has no horizontal overflow and navigation works", async ({ page }) 
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
   await page.getByRole("button", { name: "How it works", exact: true }).click();
   await expect(page.getByRole("heading", { name: "How PulsePilot works." })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Limitations", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "A good signal is only part of the picture." })).toBeInViewport();
+  await page.getByRole("button", { name: "Try a measurement", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Start measurement", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Session reports", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your first report starts with a moment." })).toBeVisible();
 });
