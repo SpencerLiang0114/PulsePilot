@@ -18,6 +18,42 @@ For a local production frontend, run `pnpm build` followed by `pnpm start` from 
 
 Update the Vercel CLI using `npm i -g vercel@latest` before deployment and authenticate with the intended hosting account. No hosted deployment is certified by a local build.
 
+## Modal backend deployment
+
+`backend/modal_app.py` builds the existing backend Dockerfile on Modal. It uses four CPU cores, 4 GiB RAM, one container maximum, one Uvicorn worker, and eight concurrent connections so health checks and busy responses remain available during a measurement. The existing lock still permits only one real measurement at a time. Idle containers scale to zero with a 300-second scaledown window; cold starts and JAX compilation recur after idle shutdown.
+
+The Modal deployment token authorizes hosting. `MODEL_API_KEY` authorizes Meta model calls; it does not deploy infrastructure. Only `MODEL_API_KEY`, `META_MODEL`, `AGENT_MODE`, and `ALLOWED_ORIGINS` are injected into the backend. Modal, Baseten, and Fireworks credentials are not forwarded into the hosted service.
+
+From the repository root, after storing credentials in ignored `backend/.env`:
+
+```sh
+uv run --no-project --python 3.12 --with modal==1.6.3 --with python-dotenv==1.2.4 python - <<'PY'
+import os
+import subprocess
+from dotenv import load_dotenv
+
+load_dotenv("backend/.env")
+os.environ.pop("MODAL_PROFILE", None)
+os.environ["ALLOWED_ORIGINS"] = "https://pulsepilot-xi.vercel.app"
+# On this development machine the configured proxy stalls Modal's API connection.
+os.environ["MODAL_DISABLE_API_PROXY"] = "1"
+subprocess.run(["modal", "deploy", "backend/modal_app.py"], check=True)
+PY
+```
+
+Keep the exact origin synchronized with the frontend domain. A new preview hostname must be explicitly allowed before camera/WebSocket testing. Set Vercel's production `NEXT_PUBLIC_BACKEND_URL` to the Modal HTTPS origin before deploying the frontend. `.vercelignore` excludes the Python backend and environment files from frontend uploads.
+
+### Hosted demo — November 1, 2026
+
+- Frontend: <https://pulsepilot-xi.vercel.app>, Vercel project `pulsepilot` in `spencerliang0114s-projects`, Node.js 24.
+- Backend: <https://spencerliang0114--pulsepilot-inference.us-east.modal.run>, Modal app `pulsepilot`.
+- Frontend source: `a64d9b5`; deployment configuration is recorded in this change. No Git push or automatic Git deployment was configured.
+- Verified: production build and TypeScript, browser page rendering without JavaScript errors, browser cross-origin `/health`, simulated WebSocket sample/report delivery, real checkpoint initialization, camera-protocol report delivery, and model-slot release. Initial hosted FacePhys initialization took 46.89 seconds. No camera frames were used in that initialization check.
+- A separate 30-second Chromium synthetic-camera run reached the report screen through the public production URL. It delivered 58 observation windows, no face or accepted heart-rate values, and about 12.1 processed fps from a 20-fps fake camera. Mean acknowledgement round trip was 278 ms. This verifies transport/report delivery, not adequate live-camera throughput or physiological accuracy. An earlier synthetic-camera run did not reach the report before the test timeout; no cause was established.
+- A hosted 30-second simulation with synthetic evidence completed Muse report interpretation and Health Insights. Accepted model responses took approximately 2.59 and 2.10 seconds respectively. One coaching explanation hit its 1.5-second timeout and fell back to deterministic guidance. This is one synthetic check, not a provider reliability guarantee.
+- Production is public; Vercel Authentication remains enabled for preview deployments (`ssoProtection.deploymentType=preview`). The production URL returned HTTP 200 without authentication.
+- Physical-camera throughput, reference-device accuracy, and multi-user performance require separate hosted validation.
+
 ## Single-origin container demo
 
 ```sh

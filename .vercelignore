@@ -1,0 +1,11 @@
+backend/
+.vendor/
+docs/
+scripts/fetch_facephys.py
+tests/
+test-results/
+playwright-report/
+.code-review-graph/
+.impeccable/
+.env*
+*.tsbuildinfo
