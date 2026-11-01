@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Printer, CircleCheck, FlaskConical } from "lucide-react";
+import { Activity, ArrowLeft, Clock3, Download, Heart, Printer, CircleCheck, FlaskConical, Signal, Waves } from "lucide-react";
 import { Chart } from "./chart";
 import { Analysis, HealthInsightBundle, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
 
@@ -10,8 +10,8 @@ function PulseVariabilityResults({ report }: { report: ReportData }) {
   return <section aria-label="Pulse variability" className="report-section">
     <header className="report-section-heading"><h2>Pulse variability</h2>
       <p>Beat-to-beat timing from your BVP waveform · experimental camera-based HRV estimate</p></header>
-    <div className="panel">
-      <div className="report-stats">
+    <div className="panel variability-panel">
+      <div className="report-stats variability-stats">
         <div><span>Successive variation · RMSSD</span><strong>{available ? result.rmssd_ms : "—"} <small>ms</small></strong></div>
         <div><span>Interval spread · SDNN</span><strong>{available ? result.sdnn_ms : "—"} <small>ms</small></strong></div>
         <div><span>Continuous segment</span><strong>{result ? clockText(result.duration) : "—"}</strong></div>
@@ -22,7 +22,7 @@ function PulseVariabilityResults({ report }: { report: ReportData }) {
         available ? "Your heart does not beat at perfectly equal intervals. RMSSD describes differences between successive pulse intervals; SDNN describes their overall spread in this segment. These values describe pulse timing, not a health grade." :
         result?.reason ?? "The measurement service did not include beat-to-beat analysis in this report. It may be running an earlier version. Restart the backend with the latest code, then record again; average heart-rate readings cannot reconstruct HRV."}</p>
       {available && <>
-        <div className="section-heading"><h3>Pulse intervals over time</h3><span>Interval · ms</span></div>
+        <div className="section-heading"><h3><Waves size={18} aria-hidden="true" />Pulse intervals over time</h3><span>Interval · ms</span></div>
         <Chart values={result.intervals_ms} times={result.interval_times} label="Pulse intervals in the analyzed continuous segment" unit="ms" height={150} showScale />
         <div className="axis"><span>{clockText(result.interval_times[0] ?? 0)}</span><span>{clockText(result.interval_times.at(-1) ?? 0)}</span></div>
         <p>For a useful personal baseline, compare recordings of similar length, taken at a similar time and in the same resting position. A single value cannot establish stress, recovery, fitness, or disease.</p>
@@ -48,7 +48,7 @@ function HealthInsights({ bundle }: { bundle: HealthInsightBundle | null | undef
       bundle.status === "unavailable" ? "AI selection unavailable or stopped. Deterministic guidance remains available." :
       bundle.status === "fallback" ? "Muse Spark could not provide a valid selection. Showing deterministic guidance." :
       bundle.analyst === "muse" ? "AI-selected suggestions · server-authored and validated" : "Deterministic suggestions · Muse Spark was not used for the displayed guidance"}</p></header>
-    <div className="panel">
+    <div className="panel health-insight-panel">
     {!bundle.sufficient_evidence && <p><strong>Insufficient evidence for personal heart-rate interpretation.</strong></p>}
     {[...bundle.insights, ...bundle.limitations].map(item => <article key={item.insight_id} className="statement">
       <h3>{item.title}</h3><p>{item.text}</p>
@@ -88,17 +88,31 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
     </div>
     {report.mode === "simulation" && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulated session</strong> Synthetic data for exploring the experience. These are not your measurements.</div>}
     <header className="report-heading"><div>
-      <h1>Session report</h1>
       <div className="completion-label"><CircleCheck size={18} /> Measurement complete</div>
-      <p>{new Date(report.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} <span className="separator">/</span> {clockText(stats.duration)} session <span className="separator">/</span> {report.mode === "camera" ? "Live camera" : report.mode === "recording" ? "Video recording" : "Simulation"}</p></div>
-      <div className="report-main-number"><span>Average estimated heart rate</span><div>{stats.mean_bpm ?? "—"} <small>BPM</small></div><p>{stats.mean_bpm == null ? "Insufficient usable signal" : "From accepted measurement windows"}</p></div>
+      <h1>Session report</h1>
+      <p>{new Date(report.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
+      <div className="report-session-meta"><span><Clock3 size={14} aria-hidden="true" />{clockText(stats.duration)} session</span><span><Activity size={14} aria-hidden="true" />{report.mode === "camera" ? "Live camera" : report.mode === "recording" ? "Video recording" : "Simulation"}</span></div></div>
+      <div className="report-emblem" aria-hidden="true"><Activity size={30} strokeWidth={1.5} /></div>
     </header>
-    <div className="report-stats">
-      <div><span>Median heart rate</span><strong>{stats.median_bpm ?? "—"} <small>BPM</small></strong></div>
-      <div><span>Observed range</span><strong>{stats.min_bpm == null ? "—" : `${stats.min_bpm}–${stats.max_bpm}`} <small>BPM</small></strong></div>
-      <div><span>Accepted readings</span><strong>{percent(stats.usable_fraction)}</strong></div>
-      <div><span>First stable signal</span><strong>{stats.stable_at == null ? "—" : clockText(stats.stable_at)}</strong></div>
-    </div>
+    <section aria-label="Measurement overview" className="report-overview panel">
+      <div className={`report-pulse-summary${stats.mean_bpm == null ? " is-unavailable" : ""}`}>
+        <h2>Average estimated heart rate</h2>
+        <div className="report-pulse-dial">
+          <svg viewBox="0 0 280 280" aria-hidden="true"><circle className="report-pulse-ticks" cx="140" cy="140" r="123" /><circle className="report-pulse-inner" cx="140" cy="140" r="101" /></svg>
+          <div className="report-main-number"><Heart size={22} aria-hidden="true" /><div>{stats.mean_bpm ?? "—"}</div><span>BPM</span></div>
+        </div>
+        <p>{stats.mean_bpm == null ? "Insufficient usable signal" : "From accepted measurement windows"}</p>
+      </div>
+      <div className="report-overview-details">
+        <div className="report-stats">
+          <div><span><Heart size={17} aria-hidden="true" />Median heart rate</span><strong>{stats.median_bpm ?? "—"} <small>BPM</small></strong><p>Middle accepted reading</p></div>
+          <div className="report-range"><span><Activity size={17} aria-hidden="true" />Observed range</span><strong>{stats.min_bpm == null ? "—" : `${stats.min_bpm}–${stats.max_bpm}`} <small>BPM</small></strong><p>Accepted session estimates</p></div>
+          <div><span><Signal size={17} aria-hidden="true" />Accepted readings</span><strong>{percent(stats.usable_fraction)}</strong><p>Passed measurement checks</p></div>
+          <div><span><Clock3 size={17} aria-hidden="true" />First stable signal</span><strong>{stats.stable_at == null ? "—" : clockText(stats.stable_at)}</strong><p>Time from session start</p></div>
+        </div>
+        <p className="report-overview-note">Signal quality describes the measurement. It is not a health score.</p>
+      </div>
+    </section>
     <PulseVariabilityResults report={report} />
     <HealthInsights bundle={report.health_insights} />
     <section className="report-section">
