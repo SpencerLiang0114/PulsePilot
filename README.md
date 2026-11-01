@@ -1,5 +1,7 @@
 # PulsePilot
 
+Built for the **Meta Global AI Developer Hackathon**. [Try the live demo](https://pulsepilot-xi.vercel.app).
+
 PulsePilot is a research prototype that estimates your heart rate from webcam video and helps you understand the quality of each measurement. It combines the pretrained FacePhys model with live guidance on lighting, movement, and face position, then produces a report of heart-rate trends, signal quality, and the adjustments made during the session.
 
 Optional Meta Muse Spark assistance runs through three LangGraph workflows: measurement coaching, session analysis, and Health Insights. The sensing pipeline and numerical reports run independently of those model requests, so a slow or unavailable AI service does not stop measurement.
@@ -54,7 +56,7 @@ This simplified schematic follows [Figure 3 and Sections 3.1–3.5 of the paper]
 
 PulsePilot uses the pretrained `FacePhys.rlap` checkpoint through a [pinned open-rPPG implementation](https://github.com/KegangWangCCNU/open-rppg/tree/4d24237e7b14e17429b49d0334f2282b7d2fd159), without retraining or changing its weights. The model runs at a 30 Hz cadence in the Python service. PulsePilot derives BPM from a ten-second waveform window and applies its own freshness, camera-condition, cadence, and signal-quality checks. Preliminary estimates remain separate from accepted statistics.
 
-The paper's results describe FacePhys's experiments; they do not establish PulsePilot's measurement accuracy. See the [integration notes](docs/facephys-integration.md) for preprocessing, signal processing, heatmap semantics, and checkpoint provenance.
+The paper's results describe FacePhys's experiments; they do not establish PulsePilot's measurement accuracy. The adapter and signal processing are implemented in [estimator.py](backend/pulsepilot/estimator.py) and [pulse.py](backend/pulsepilot/pulse.py).
 
 ### The agentic system
 
@@ -79,7 +81,7 @@ Configure `AGENT_MODE` on the backend:
 | `assist` | Rules choose actions; validated Muse explanations and report selections may enrich the result. **Default.** |
 | `adaptive` | Muse may propose a currently eligible action before the coach commits it; validation or fallback determines the applied action. |
 
-The web setup uses `meta` coaching automatically. Direct clients can also request `passive` or `rules`. Adaptive selection has a six-second deadline; explanations and observation retain a 1.5-second deadline. Report analysis and Health Insights each have a separate 12-second deadline. See the [LangGraph workflow reference](docs/langgraph-p2.md) and [Health Insights design](docs/p3-health-insights.md) for contracts, validation, and lifecycle details.
+The web setup uses `meta` coaching automatically. Direct clients can also request `passive` or `rules`. Adaptive selection has a six-second deadline; explanations and observation retain a 1.5-second deadline. Report analysis and Health Insights each have a separate 12-second deadline. The [orchestration package](backend/pulsepilot/orchestration) contains the workflows, contracts, and validation.
 
 ## Run locally
 
@@ -130,7 +132,7 @@ After installing the checkpoint, run a video file through the sensing and numeri
 uv run --project backend python scripts/replay.py path/to/recording.mp4 --output /tmp/pulsepilot-report.json
 ```
 
-The replay script supports an optional synchronized reference CSV for comparison; run it with `--help` for the format. A recording can test sensing and report behavior, but cannot simulate a person's response to live coaching. Synthetic sessions require no checkpoint or model key; their WebSocket configuration is documented in the [backend protocol](docs/backend-service.md).
+The replay script supports an optional synchronized reference CSV for comparison; run it with `--help` for the format. A recording can test sensing and report behavior, but cannot simulate a person's response to live coaching. Synthetic sessions require no checkpoint or model key. A direct WebSocket client can connect to `/ws/measure` with an allowed `Origin`, send `{"type":"start","mode":"simulation","duration":30,"ai_consent":false,"coaching":"rules"}`, and receive synthetic samples followed by a report. The complete protocol and schemas are defined in [app.py](backend/pulsepilot/app.py) and [schemas.py](backend/pulsepilot/schemas.py).
 
 ## Privacy and research limits
 
@@ -138,7 +140,9 @@ Camera and recording sessions send video frames to the configured inference serv
 
 PulsePilot has not been clinically validated and does not diagnose conditions. Signal quality measures periodicity, not heart-rate accuracy. A before/after quality improvement does not establish a physiological change or causal coaching benefit. Health Insights provide general guidance; simulated or insufficient measurements do not produce personal heart-rate interpretations. Symptom advice is triggered by user-declared symptoms, independently of AI.
 
-Real-camera validation is limited to the [three-session local self-test](docs/p4-real-camera.md). Synchronized reference-device accuracy, low-light robustness, multi-user coaching benefit, clinician review of Health Insights, and durable hosting remain unverified. Source-code and pretrained-checkpoint licensing have different terms; review the [licensing limitation](docs/facephys-integration.md#licensing-limitation) before redistributing weights or making a commercial release.
+Real-camera validation is limited to a three-session local self-test on one participant and one machine. Synchronized reference-device accuracy, low-light robustness, multi-user coaching benefit, and clinician review of Health Insights remain unverified. The hosted demo has passed synthetic transport and report checks; adequate hosted live-camera throughput has not been established.
+
+The pinned [open-rPPG license](https://github.com/KegangWangCCNU/open-rppg/blob/4d24237e7b14e17429b49d0334f2282b7d2fd159/LICENSE) covers its source and tools under MIT terms while reserving pretrained-model terms to the original authors and publications. Model weights are fetched separately into ignored `.vendor/` and are not included in this repository. Check the original model terms before redistributing weights or making a commercial release.
 
 ## Development and evaluation
 
@@ -161,7 +165,7 @@ RUN_FACEPHYS_INTEGRATION=1 uv run --project backend pytest -q backend/tests/test
 uv run --project backend python scripts/evaluate_p2.py --output /tmp/pulsepilot-evaluation.json
 ```
 
-The policy harness compares deterministic, assisted, and adaptive modes on seeded synthetic traces without remote model requests. The [verification record](docs/verification.md) records executed checks, and the [evaluation protocol](docs/evaluation.md) separates synthetic fixtures, recordings, human sessions, and reference-device measurements.
+The policy harness compares deterministic, assisted, and adaptive modes on seeded synthetic traces without remote model requests. Synthetic fixtures and checkpoint smoke tests establish software behavior, not human measurement accuracy or coaching benefit.
 
 ## Deployment
 
@@ -173,17 +177,10 @@ docker compose up --build
 
 Open [the container demo](http://localhost:8080). Compose defaults to `AGENT_MODE=assist` and reads `MODEL_API_KEY` from the shell or Compose environment, not `backend/.env`.
 
-For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-inference-host` and set the backend's exact `ALLOWED_ORIGINS`. Keep physiological inference in the persistent Python service. The [deployment runbook](docs/deployment.md) covers HTTPS/WSS, proxy configuration, and production startup.
+For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-inference-host` and set the backend's exact HTTPS `ALLOWED_ORIGINS`. Serve the backend over HTTPS/WSS and use one Uvicorn worker. Keep physiological inference in the persistent Python service.
 
-## Further documentation
+The live demo uses Vercel for the frontend and Modal for inference. [backend/modal_app.py](backend/modal_app.py) reuses the backend Dockerfile with four CPU cores, 4 GiB RAM, and one container maximum. It scales to zero when idle, so a first measurement may take about a minute to initialize. Production is public; Vercel previews remain protected.
 
-- [System architecture](docs/architecture.md)
-- [LangGraph workflows and contracts](docs/langgraph-p2.md)
-- [Coaching and report agent design](docs/agent-design.md)
-- [Health Insights policy and workflow](docs/p3-health-insights.md)
-- [Backend setup and WebSocket protocol](docs/backend-service.md)
-- [FacePhys integration, heatmap, and waveform](docs/facephys-integration.md)
-- [Frontend experience](docs/web-experience.md)
-- [Evaluation protocol](docs/evaluation.md)
-- [Verification results and remaining limits](docs/verification.md)
-- [Real-camera self-test and capture diagnostics](docs/p4-real-camera.md)
+To deploy the backend, install `modal==1.6.3` in a separate Python 3.12 environment, authenticate with Modal, and export `ALLOWED_ORIGINS` plus any server-only model configuration into the deployment process. Run `modal deploy backend/modal_app.py` from the repository root. The entry point forwards only `MODEL_API_KEY`, `META_MODEL`, `AGENT_MODE`, and `ALLOWED_ORIGINS`; deployment tokens stay outside the hosted service. Local `backend/.env` values are not automatically loaded by the deployment command.
+
+After deployment, verify `/health`, WebSocket sessions, report delivery, and capacity release. A healthy endpoint or a synthetic report does not establish adequate real-camera throughput or physiological accuracy.

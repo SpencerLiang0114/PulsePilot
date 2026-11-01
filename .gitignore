@@ -14,9 +14,10 @@ __pycache__/
 test-results/
 playwright-report/
 .DS_Store
+.claude/
+.cursor/
+.mcp.json
+.opencode.json
+.impeccable/
 # Added by code-review-graph
 .code-review-graph/
-.impeccable/review/
-.impeccable/mocks/
-.impeccable/hook.cache.json
-.impeccable/hook.pending.json

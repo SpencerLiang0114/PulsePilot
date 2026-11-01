@@ -4,9 +4,13 @@
 .vercel
 node_modules
 backend/.venv
-backend/.env
-.env
-.env.local
+.env*
+**/.env*
+.claude
+.cursor
+.impeccable
+.mcp.json
+.opencode.json
 test-results
 **/__pycache__
 **/.pytest_cache
