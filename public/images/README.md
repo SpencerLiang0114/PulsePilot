@@ -1,0 +1,11 @@
+# PulsePilot preview image
+
+`pulsepilot-preview.webp` is an original image generated for PulsePilot on November 1, 2026 with the built-in image-generation tool. It is an illustrative portrait, not a participant recording or measurement output. The small landmark mesh is decorative and does not represent model attention, blood flow, or inferred physiology.
+
+The generated PNG was encoded as WebP at quality 84. The original is retained at `/Users/spencerliang/.codex/generated_images/01a198ab-4ceb-7500-9e3a-6997ed596c47/exec-4d684b29-b9b7-4861-809b-aa609acc7548.png`.
+
+## Generation prompt
+
+Use case: photorealistic-natural.
+Asset type: homepage camera-preview illustration for PulsePilot, a webcam pulse research application.
+Primary request: create a refined, believable editorial portrait that quietly communicates contactless webcam sensing. Wide panoramic composition, approximately 2.3:1 landscape. A relaxed adult with warm medium-brown skin, short natural curls, neutral expression and a simple sage cotton crew-neck shirt, looking directly toward the camera. Head and shoulders, entire head visible with generous breathing room. Place the person in the LEFT 43 percent of the composition, face centered around x=29%, y=43%. The RIGHT HALF is uninterrupted deep forest-green negative space (#173f35), blending seamlessly into the portrait backdrop; no objects there, because website text will be overlaid. Background is a real softly lit dark forest-green studio, calm and quietly scientific. Soft frontal window light, natural skin texture and warm human skin tones, gentle green reflected light on shoulders, credible photography rather than plastic 3D. A very delicate mint landmark mesh of tiny points and thin connecting lines on a SMALL portion of the cheek and temple suggests computer vision; it must stay subtle and respect the face. No colored heatmap, no glow, no lasers, no science-fiction rings, no waveforms or charts, no numerical readings, no medical instruments, no monitors, no additional faces, no logos, no typography, no text, no watermark. Elegant restrained image, premium human portrait, useful at a small UI size. This is an illustrative asset, not a screenshot of a real measurement.

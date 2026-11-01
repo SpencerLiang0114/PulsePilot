@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   Activity, ArrowRight, Camera, Check, ChevronRight, CircleHelp, Clock3, FileText,
   FlaskConical, Focus, Heart, Lightbulb, LoaderCircle, LockKeyhole, Maximize,
@@ -137,7 +138,8 @@ export function PulsePilot() {
           <div className="measurement-grid">
             <div className="capture-column">
               <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
-              <div ref={captureRef} className={`capture-stage ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
+              <div ref={captureRef} className={`capture-stage ${!busy ? "has-demo" : ""} ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
+                {!busy && <div className="camera-demo"><Image src="/images/pulsepilot-preview.webp" alt="Illustrative portrait with subtle facial landmarks showing webcam sensing" fill sizes="(max-width: 520px) 650px, (max-width: 1100px) 860px, 70vw" loading="eager" /></div>}
                 <video ref={m.videoRef} playsInline muted className={`${m.mode === "camera" ? "mirrored" : ""} ${liveVideo ? "visible" : ""}`} aria-label="Live camera or recording preview" />
                 <div className="camera-top"><span className="camera-badge"><span className={measuring ? "live-dot" : "off-dot"} />{measuring ? sources[m.mode] : m.status === "connecting" ? "Connecting" : "Camera off"}</span>
                   <button className="camera-expand" aria-label="Expand camera preview" onClick={() => {
@@ -145,14 +147,14 @@ export function PulsePilot() {
                     else void captureRef.current?.requestFullscreen().catch(() => {});
                   }}><Maximize size={17} /></button>
                 </div>
-                {(!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
+                {busy && (!measuring || m.mode === "simulation") && <FaceGuide active={measuring} />}
                 {liveVideo && showHeatmap && m.heatmap && (camera?.face_count ?? 0) <= 1 &&
                   <FaceHeatmap heatmap={m.heatmap} captureSize={m.captureSize} mirrored={m.mode === "camera"} />}
                 {liveVideo && camera?.face_visible && faceBox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
                   <rect x={faceBox[0] * m.captureSize.width} y={faceBox[1] * m.captureSize.height} width={(faceBox[2] - faceBox[0]) * m.captureSize.width} height={(faceBox[3] - faceBox[1]) * m.captureSize.height} rx={showHeatmap && m.heatmap ? 0 : 12} fill="none" stroke={showHeatmap && m.heatmap ? "#ff3020" : current?.usable ? "#75e1cf" : "#ffffff"} strokeWidth={showHeatmap && m.heatmap ? 2 : 1.5} />
                   {camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
                 </svg>}
-                <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Position your face inside the guide to begin.</p></>}
+                <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Face your camera.<br />We’ll guide you from there.</p><span className="preview-caption"><Focus size={13} />Illustrative preview</span></>}
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}
                 </div>
                 {liveVideo && <>

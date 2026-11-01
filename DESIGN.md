@@ -2,14 +2,14 @@
 name: PulsePilot
 description: A guided webcam measurement workspace for estimating pulse and reviewing session evidence.
 colors:
-  primary: "#c14e38"
-  navy: "#17283c"
-  canvas: "#f4f3ef"
+  primary: "#26755f"
+  forest: "#173f35"
+  canvas: "#f0f7f3"
   surface: "#ffffff"
-  ink: "#202c3e"
-  muted: "#616c7b"
-  line: "#dce0e5"
-  nav-highlight: "#f69278"
+  ink: "#263f39"
+  muted: "#536e66"
+  line: "#cfe3da"
+  nav-highlight: "#9fd8bf"
   accepted-series: "#168286"
   preliminary-series: "#a36614"
   waveform: "#326c68"
@@ -78,7 +78,7 @@ components:
     height: "44px"
   button-secondary:
     backgroundColor: "{colors.surface}"
-    textColor: "#4a6172"
+    textColor: "#42665b"
     typography: "{typography.button}"
     rounded: "{rounded.sm}"
     padding: "11px 18px"
@@ -102,7 +102,7 @@ components:
     padding: "3px 0 0"
     height: "84px"
   camera-shell:
-    backgroundColor: "{colors.navy}"
+    backgroundColor: "{colors.forest}"
     textColor: "{colors.surface}"
     rounded: "{rounded.lg}"
     padding: "18px 22px"
@@ -114,31 +114,31 @@ components:
 
 **Creative North Star: "The Steady Signal Workspace"**
 
-PulsePilot reads as a calm measurement workspace. Deep navy anchors navigation and the camera area; the warm canvas and white surfaces keep measurements legible. Coral marks primary actions, active navigation, and face-alignment brackets. Fine rules organize supporting evidence without adding visual weight.
+PulsePilot reads as a calm measurement workspace. Forest green anchors navigation and the camera area; the pale mint canvas and white surfaces keep measurements legible. Green marks primary actions, while mint highlights active navigation and face-alignment brackets. Fine rules organize supporting evidence without adding visual weight.
 
 At wide widths, the camera and its controls lead on the left while heart rate, coaching, and setup evidence sit on the right. The layout stacks as space narrows. Manrope, balanced headings, compact labels, and tabular numerals keep the experience familiar and readable. Measurement and chart states remain explicit, including empty and preliminary data.
 
 **Key Characteristics:**
-- Navy navigation and camera surfaces.
-- Warm canvas with white, lightly bordered measurement surfaces.
-- Coral action cues and face-alignment brackets.
+- Forest-green navigation and camera surfaces.
+- Pale mint canvas with white, lightly bordered measurement surfaces.
+- Green action cues and mint face-alignment brackets.
 - Teal and amber chart colors retain their data meanings.
 
 ## Colors
 
-The palette pairs a single warm action accent with restrained neutrals; chart colors remain semantic and local to the data they describe.
+The palette shares green action, text, and surface roles across measurement, setup, reports, and the explainer; chart colors remain semantic and local to the data they describe.
 
 ### Primary
-- **Pulse Coral**: Primary buttons, action icons, selected duration, and small interactive accents.
-- **Soft Coral**: Active navigation underline and camera alignment brackets.
+- **Pulse Green**: Primary buttons, action icons, selected duration, and small interactive accents.
+- **Soft Mint**: Active navigation underline and camera alignment brackets.
 
 ### Neutral
-- **Deep Navy**: Horizontal navigation and the camera header.
-- **Warm Canvas**: Main application background.
+- **Forest Green**: Horizontal navigation and the camera header.
+- **Mint Canvas**: Main application background.
 - **White Surface**: Measurement cards, dialogs, and controls.
 - **Deep Ink**: Headings and primary text.
-- **Slate Muted**: Supporting copy and secondary values.
-- **Cool Rule**: Fine borders and dividers.
+- **Muted Green**: Supporting copy and secondary values.
+- **Sage Rule**: Fine borders and dividers.
 
 **The Semantic Series Rule.** Accepted heart-rate estimates stay teal; preliminary estimates stay amber and dashed. The normalized waveform keeps its separate teal trace. The face heatmap's red-to-yellow scale represents model attention, not blood flow.
 
@@ -171,22 +171,22 @@ Spacing clusters around 8px, 12px, 16px, 24px, and 32px. Thin horizontal rules g
 
 ## Elevation & Depth
 
-The resting interface is flat: off-white canvas, white surfaces, and thin borders establish depth through tone and grouping. A diffuse shadow is reserved for the consent/setup dialog. The navy camera area provides a distinct working surface; it does not use a raised-card shadow.
+The resting interface is flat: pale mint canvas, white surfaces, and thin borders establish depth through tone and grouping. A diffuse shadow is reserved for the consent/setup dialog. The forest-green camera area provides a distinct working surface; it does not use a raised-card shadow.
 
 ### Shadow Vocabulary
-- **Setup dialog** (`0 24px 90px #101d3040`): Separates the active consent and setup dialog from its backdrop.
+- **Setup dialog** (`0 24px 90px #102e2740`): Separates the active consent and setup dialog from its backdrop.
 
 ## Shapes
 
-Buttons, selectors, and compact status labels use gently rounded corners (6px); the heatmap control uses a more rounded edge (8px). Measurement and report cards use a consistent 12px radius. Borders stay thin, while the camera shell's top heading and bottom control tray connect into a single frame. The face guide uses a dashed oval with four coral alignment brackets.
+Buttons, selectors, and compact status labels use gently rounded corners (6px); the heatmap control uses a more rounded edge (8px). Measurement and report cards use a consistent 12px radius. Borders stay thin, while the camera shell's top heading and bottom control tray connect into a single frame. The face guide uses a dashed oval with four mint alignment brackets.
 
 ## Components
 
 ### Buttons
 - **Shape:** Gently rounded corners (6px).
-- **Primary:** Coral fill, white text, bold 13px label, 11px 18px padding, and 44px minimum height; hover deepens the coral.
-- **Secondary:** White fill, pale border, slate text, and the same geometry as the primary button.
-- **Hover / Focus:** Hover adjusts fill or border. Keyboard focus uses a 3px coral outline with a 4px offset; pressed buttons move down 1px. Disabled controls lower opacity.
+- **Primary:** Green fill, white text, bold 13px label, 11px 18px padding, and 44px minimum height; hover deepens the green.
+- **Secondary:** White fill, pale border, muted green text, and the same geometry as the primary button.
+- **Hover / Focus:** Hover adjusts fill or border. Keyboard focus uses a 3px green outline with a 4px offset; pressed buttons move down 1px. Disabled controls lower opacity.
 
 ### Cards / Containers
 - **Corner Style:** 12px on measurement and report cards.
@@ -197,21 +197,21 @@ Buttons, selectors, and compact status labels use gently rounded corners (6px); 
 
 ### Inputs / Fields
 - **Style:** White select field, 1px gray stroke, 6px radius, 10px padding, and 46px minimum height.
-- **Focus:** 3px coral outline with 4px offset, matching buttons and links.
-- **Selection:** Duration options indicate selection through coral border and a pale coral fill.
+- **Focus:** 3px green outline with 4px offset, matching buttons and links.
+- **Selection:** Duration options indicate selection through green border and a pale mint fill.
 
 ### Navigation
-- **Style:** Horizontal deep-navy header with white brand, muted labels, and 28px desktop gaps.
-- **Active:** White label with a 3px soft-coral underline; the current page is also exposed with `aria-current`.
+- **Style:** Horizontal forest-green header with white brand, muted labels, and 28px desktop gaps.
+- **Active:** White label with a 3px soft-mint underline; the current page is also exposed with `aria-current`.
 - **Mobile:** Navigation wraps beneath the brand; labels remain visible as the viewport narrows.
 
 ### Camera Alignment Guide
-The camera area has a navy heading over a deeper blue capture field. Four soft-coral brackets frame a dashed oval, echoed by the active navigation underline. Guide, live reading, heatmap, and waveform colors retain their current state and data meaning.
+The camera area has a forest-green heading and capture field. Before a session, an original portrait with subtle facial landmarks fills the preview; copy sits alongside it on desktop and below the face on mobile. The visible “Illustrative preview” label and “Camera off” badge distinguish this image from a live measurement. The image disappears while connecting, measuring, or finishing. The connecting and simulation states retain the dashed oval and mint alignment brackets. Guide, live reading, heatmap, and waveform colors retain their current state and data meaning. Image provenance and the full generation prompt live in `public/images/README.md`.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep the primary action coral and the app canvas warm and neutral.
+- **Do** keep the primary action green and the app canvas pale mint.
 - **Do** use white, lightly bordered surfaces for measurements and report evidence.
 - **Do** keep accepted and preliminary heart-rate series distinguishable by both color and line treatment.
 - **Do** leave unavailable readings empty and preserve the visible measurement state.
@@ -223,7 +223,7 @@ The camera area has a navy heading over a deeper blue capture field. Four soft-c
 
 ## Session reports
 
-Reports use a centered 1120px reading width and a mint visual treatment inspired by the supplied FacePhys report. Report-local colors are deep green ink `#263f39`, muted green `#536e66`, mint `#d9f0e9`, pale sage `#e5f3e5`, translucent white surfaces, and green actions `#26755f`. The rest of the workspace retains its navy and coral palette. Manrope remains the typeface, with large tabular measurements and compact supporting labels.
+Reports use a centered 1120px reading width and a mint visual treatment inspired by the supplied FacePhys report. The shared colors are deep green ink `#263f39`, muted green `#536e66`, mint `#d9f0e9`, pale sage `#e5f3e5`, translucent white surfaces, and green actions `#26755f`. The workspace, dialogs, navigation, and report list use this same green family; forest `#173f35` anchors dark surfaces and mint `#9fd8bf` highlights them. Manrope remains the typeface, with large tabular measurements and compact supporting labels.
 
 The session title and date lead into an overview: a circular frame around the average estimated heart rate on the left and a two-by-two grid of supporting measurements on the right. The complete, decorative tick ring does not encode a score, quality percentage, target, or normal range. It becomes muted when no accepted heart rate is available. At 800px and below, the overview stacks with the ring first; metric cards retain two columns, including on narrow phones.
 
