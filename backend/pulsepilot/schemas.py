@@ -250,20 +250,6 @@ class CaptureDiagnostics(StrictModel):
     max_sample_gap_ms: float | None = Field(ge=0)
 
 
-class PulseVariability(StrictModel):
-    model_config = ConfigDict(frozen=True)
-    status: Literal["available", "insufficient", "simulation"] = "insufficient"
-    method: str = "BVP pulse peaks; experimental PRV, not ECG HRV"
-    reason: str = "No timestamped BVP segment met the analysis checks."
-    rmssd_ms: float | None = None
-    sdnn_ms: float | None = None
-    duration: float = 0
-    interval_count: int = 0
-    rejected_intervals: int = 0
-    interval_times: tuple[float, ...] = ()
-    intervals_ms: tuple[float, ...] = ()
-
-
 class MeasurementEvidence(StrictModel):
     model_config = ConfigDict(frozen=True)
     report_id: str
@@ -286,7 +272,6 @@ class MeasurementEvidence(StrictModel):
     activity_context: Literal["resting", "active", "recovery", "unknown"] = "unknown"
     concerning_symptoms: bool = False
     evidence_ids: tuple[str, ...]
-    pulse_variability: PulseVariability = Field(default_factory=PulseVariability)
 
 
 class GuidanceReference(StrictModel):
@@ -336,4 +321,3 @@ class Report(StrictModel):
     capture_diagnostics: CaptureDiagnostics | None = None
     health_context: HealthContext = Field(default_factory=HealthContext)
     health_insights: HealthInsightBundle | None = None
-    pulse_variability: PulseVariability = Field(default_factory=PulseVariability)

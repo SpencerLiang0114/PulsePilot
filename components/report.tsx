@@ -1,41 +1,8 @@
 "use client";
 
-import { Activity, ArrowLeft, Clock3, Download, Heart, Printer, CircleCheck, FlaskConical, Signal, Waves } from "lucide-react";
+import { Activity, ArrowLeft, Clock3, Download, Heart, Printer, CircleCheck, FlaskConical, Signal } from "lucide-react";
 import { Chart } from "./chart";
 import { Analysis, HealthInsightBundle, clockText, decisionLabel, percent, Report as ReportData } from "@/lib/types";
-
-function PulseVariabilityResults({ report }: { report: ReportData }) {
-  const result = report.pulse_variability;
-  const available = report.mode !== "simulation" && result?.status === "available";
-  return <section aria-label="Pulse variability" className="report-section">
-    <header className="report-section-heading"><h2>Pulse variability</h2>
-      <p>Beat-to-beat timing from your BVP waveform · experimental camera-based HRV estimate</p></header>
-    <div className="panel variability-panel">
-      <div className="report-stats variability-stats">
-        <div><span>Successive variation · RMSSD</span><strong>{available ? result.rmssd_ms : "—"} <small>ms</small></strong></div>
-        <div><span>Interval spread · SDNN</span><strong>{available ? result.sdnn_ms : "—"} <small>ms</small></strong></div>
-        <div><span>Continuous segment</span><strong>{result ? clockText(result.duration) : "—"}</strong></div>
-        <div><span>Pulse intervals</span><strong>{result?.interval_count ?? "—"}</strong></div>
-      </div>
-      <h3>{available ? "What your pulse timing tells you" : "Pulse variability is unavailable"}</h3>
-      <p>{report.mode === "simulation" ? "Synthetic data cannot measure your HRV. Start a camera measurement to collect your own pulse waveform." :
-        available ? "Your heart does not beat at perfectly equal intervals. RMSSD describes differences between successive pulse intervals; SDNN describes their overall spread in this segment. These values describe pulse timing, not a health grade." :
-        result?.reason ?? "The measurement service did not include beat-to-beat analysis in this report. It may be running an earlier version. Restart the backend with the latest code, then record again; average heart-rate readings cannot reconstruct HRV."}</p>
-      {available && <>
-        <div className="section-heading"><h3><Waves size={18} aria-hidden="true" />Pulse intervals over time</h3><span>Interval · ms</span></div>
-        <Chart values={result.intervals_ms} times={result.interval_times} label="Pulse intervals in the analyzed continuous segment" unit="ms" height={150} showScale />
-        <div className="axis"><span>{clockText(result.interval_times[0] ?? 0)}</span><span>{clockText(result.interval_times.at(-1) ?? 0)}</span></div>
-        <p>For a useful personal baseline, compare recordings of similar length, taken at a similar time and in the same resting position. A single value cannot establish stress, recovery, fitness, or disease.</p>
-      </>}
-      <details className="trend-note"><summary>How this estimate is calculated</summary>
-        <p>Pulse peaks are detected in timestamped BVP windows that passed the live measurement checks. Overlapping windows are counted once. Gaps and rejected intervals split segments; only the longest continuous segment is used, with at least 30 seconds and 30 pulse intervals. Intervals are included in the JSON export.</p>
-        <p>This is pulse-rate variability (PRV), not ECG-measured HRV. Camera timing and pulse-wave effects can change the result. Short recordings are exploratory and are not interchangeable with standard five-minute recordings. No synchronized ECG validation has been performed.</p>
-        {result && <p>{result.rejected_intervals} intervals rejected by timing checks. Rejection does not identify abnormal heartbeats.</p>}
-        <p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8704576/" target="_blank" rel="noreferrer">Research on camera-based pulse variability</a> · <a href="https://www.escardio.org/static-file/Escardio/Guidelines/Scientific-Statements/guidelines-Heart-Rate-Variability-FT-1996.pdf" target="_blank" rel="noreferrer">HRV measurement standards</a></p>
-      </details>
-    </div>
-  </section>;
-}
 
 function HealthInsights({ bundle }: { bundle: HealthInsightBundle | null | undefined }) {
   if (!bundle) return <section aria-label="Health Insights" className="report-section health-insights">
@@ -113,7 +80,6 @@ export function ReportView({ report, onBack, onNew }: { report: ReportData; onBa
         <p className="report-overview-note">Signal quality describes the measurement. It is not a health score.</p>
       </div>
     </section>
-    <PulseVariabilityResults report={report} />
     <HealthInsights bundle={report.health_insights} />
     <section className="report-section">
     <header className="report-section-heading"><h2>Recording summary &amp; next measurement</h2><p>

@@ -29,7 +29,7 @@ def test_native_snapshot_is_immutable_and_does_not_change_report():
     for item in bundle.insights + bundle.limitations:
         assert set(item.evidence_ids) <= set(bundle.evidence)
         assert set(item.guidance_reference_ids) <= set(bundle.guidance_references)
-    assert "HRV" in bundle.limitations[0].text
+    assert "No diagnosis" in bundle.limitations[0].text
 
 
 @pytest.mark.parametrize("change", [

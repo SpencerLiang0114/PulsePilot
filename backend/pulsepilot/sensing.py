@@ -12,8 +12,8 @@ from .schemas import CameraMetrics, CandidateAction, Sample
 class Thresholds:
     min_window: float = 10.0
     min_fps: float = 24.0
-    sqi_enter: float = 0.55
-    sqi_exit: float = 0.45
+    sqi_enter: float = 0.45
+    sqi_exit: float = 0.35
     report_sqi: float = 0.35
     report_min_fps: float = 20.0
     center_offset: float = 0.18

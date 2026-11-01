@@ -33,17 +33,29 @@ def test_invalid_signal_never_displays_bpm(candidate, sqi, fps, fresh):
         assert result.report_bpm is None
 
 
+@pytest.mark.parametrize("fps,fresh", [(23.9, 12), (30, 9.9)])
+def test_lower_accepted_sqi_still_requires_capture_rate_and_full_window(fps, fresh):
+    gate = ReliabilityGate()
+    for _ in range(4):
+        result = gate.apply(good_sample(sqi=.45, fps=fps), 72, fresh)
+        assert result.bpm is None and not result.usable
+
+
 def test_hysteresis_holds_then_drops():
     gate = ReliabilityGate()
     for _ in range(3):
-        gate.apply(good_sample(), 72, 12)
-    assert gate.apply(good_sample(sqi=.50), 72, 12).usable
-    assert not gate.apply(good_sample(sqi=.40), 72, 12).usable
+        gate.apply(good_sample(sqi=.45), 72, 12)
+    assert gate.apply(good_sample(sqi=.35), 72, 12).usable
+    assert not gate.apply(good_sample(sqi=.349), 72, 12).usable
+    for _ in range(4):
+        assert not gate.apply(good_sample(sqi=.449), 72, 12).usable
+    for i in range(3):
+        assert gate.apply(good_sample(sqi=.45), 72, 12).usable == (i == 2)
 
 
 def test_preliminary_report_threshold_does_not_change_live_acceptance():
     gate = ReliabilityGate()
-    for sqi in (.35, .40, .54):
+    for sqi in (.35, .40, .449):
         result = gate.apply(good_sample(sqi=sqi), 72.34, 12)
         assert result.report_bpm == 72.3
         assert result.bpm is None and not result.usable
@@ -70,6 +82,22 @@ def test_preliminary_report_keeps_camera_rejections(field, value):
     sample = good_sample(sqi=.4)
     setattr(sample.camera, field, value)
     assert ReliabilityGate().apply(sample, 72, 12).report_bpm is None
+
+
+@pytest.mark.parametrize("field,value", [
+    ("face_visible", False), ("face_count", 2), ("visibility_proxy", .5),
+    ("brightness", 20), ("brightness", 240), ("motion", .5), ("center_offset", .3),
+    ("yaw_proxy", .5), ("roll_degrees", 16), ("face_size", .1), ("face_size", .75),
+    ("light_imbalance", 60), ("light_change", 26),
+])
+def test_lower_accepted_sqi_keeps_camera_rejections(field, value):
+    gate = ReliabilityGate()
+    for _ in range(3):
+        gate.apply(good_sample(sqi=.45), 72, 12)
+    sample = good_sample(sqi=.4)
+    setattr(sample.camera, field, value)
+    result = gate.apply(sample, 72, 12)
+    assert not result.usable and result.bpm is None
 
 
 @pytest.mark.parametrize("confidence", [.98, np.array([.98], dtype=np.float32)])

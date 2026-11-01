@@ -28,7 +28,7 @@ Activity is `resting`, `active`, `recovery`, or `unknown`. The current UI offers
 
 The deterministic `HealthEvidenceGate` permits a description of an accepted estimate only with a documented real source/method, documented validation status (including explicitly unvalidated), at least 10 accepted windows, at least 30 seconds, usable fraction and signal coverage at least 0.65, and internally consistent mean/min/max within the existing product's 40–180 BPM range. These are conservative **product eligibility checks**, not clinically validated accuracy thresholds. Overlapping windows are not independent physiological observations. These rules do not establish that the underlying heart rate is correct.
 
-Simulation always gets synthetic-data limitations. Missing/poor/short/unknown-source evidence gets measurement-improvement advice without personal physiological interpretation. Unknown activity always gets a resting-context limitation. Native measurements always show the lack of reference validation and explain that session BPM standard deviation is not HRV. Resting education requires an explicit user declaration; no normal/abnormal classification or numerical resting-range comparison is implemented. Age, fitness, medication, and clinical history are not available.
+Simulation always gets synthetic-data limitations. Missing/poor/short/unknown-source evidence gets measurement-improvement advice without personal physiological interpretation. Unknown activity always gets a resting-context limitation. Native measurements always show the lack of reference validation. Resting education requires an explicit user declaration; no normal/abnormal classification or numerical resting-range comparison is implemented. Age, fitness, medication, and clinical history are not available.
 
 The server catalogue includes estimate education, consistent measurement conditions, general physical activity education, repeat-measurement guidance, and bounded professional follow-up for persistent concerns. It never diagnoses, estimates disease risk, prescribes, recommends medication changes, or certifies health. General activity guidance is excluded when concerning symptoms are declared.
 
@@ -43,19 +43,9 @@ Sources checked against their published guidance on 2026-10-29:
 
 **Review status:** the templates were checked against these sources during implementation. They have not been reviewed or approved by a clinician. Source attribution and automated policy tests are not expert review.
 
-## BVP pulse variability in reports (2026-10-30)
+## Release scope (2026-11-01)
 
-Reports lead with pulse variability and Health Insights, before recording guidance. `pulse_variability` contains experimental BVP-derived PRV: RMSSD (root mean square of successive interval differences) and SDNN (sample standard deviation of pulse intervals), in milliseconds. These are pulse intervals, not verified normal ECG R–R intervals. Neither session BPM standard deviation nor preliminary BPM readings are used.
-
-`variability.py` detects prominent positive peaks within each timestamped BVP window and refines timing using a three-point parabola. It commits only new interior peaks, avoiding duplicate counts and amplitude seams between independently processed overlapping windows. Windows require live acceptance, at least 24 capture FPS, finite matching timestamp/value arrays, increasing timestamps, median waveform spacing no greater than 1/24 second, no waveform gap over 100 ms, and a latest BVP point within 500 ms of the snapshot. The final 250 ms of each window is deferred. The first accepted snapshot starts eligibility; preceding BVP is not retroactively accepted. Missing/rejected snapshots and snapshot gaps over 1.5 seconds split runs.
-
-Intervals outside 333⅓–1500 ms, more than 20% from a local five-interval median, or whose local median differs more than 20% from the session's accepted median pulse interval split segments. This is artifact screening, not abnormal-beat detection. No rejected interval is removed and bridged into an artificial successive pair. Only the longest remaining continuous segment is analyzed, requiring at least 30 seconds and 30 intervals. These are product gates, not validated accuracy thresholds; screening can discard genuine physiological variation.
-
-The export preserves interval end times, intervals, segment duration, rejected-interval count, method, status, and unavailable reason; raw BVP remains stripped. Older reports require a new measurement. Simulation never generates personal variability results. Frozen health evidence includes the results for the existing consent-gated selector to choose server-authored education. No stress, recovery, fitness, disease, or normal/abnormal scores are inferred.
-
-Short estimates are exploratory, not interchangeable with standard five-minute recordings. Camera timing, filtering, waveform polarity/morphology, and pulse transit effects remain limitations. Sub-frame interpolation does not restore timing information absent from frames. Synthetic tests verify arithmetic, deduplication, gap rejection and missed-beat handling; synchronized ECG/reference-device validation and clinician review remain outstanding.
-
-References checked 2026-10-30: [Tohma et al., 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8704576/) examines camera timing, lighting and motion effects on variability; [ESC/NASPE standards](https://www.escardio.org/static-file/Escardio/Guidelines/Scientific-Statements/guidelines-Heart-Rate-Variability-FT-1996.pdf) define time-domain HRV metrics and standardized recording considerations. These do not validate this implementation or its gates.
+Pulse variability is removed from the release: no pulse-interval analysis, RMSSD, SDNN, variability report section, exported variability result, or variability-based Health Insight is generated. Reports retain accepted heart-rate estimates, signal quality, Health Insights, and measurement guidance.
 
 ## Graph and lifecycle
 

@@ -77,7 +77,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("heading", { name: "Session report", exact: true })).toBeVisible();
     const qualityHeading = page.getByRole("heading", { name: "Measurement quality", exact: true });
     await expect(qualityHeading).toBeVisible();
-    for (const title of ["Pulse variability", "Recording summary & next measurement", "Measurement timeline", "Health Insights", "Measurement quality & guidance details", "Technical capture details"]) {
+    for (const title of ["Recording summary & next measurement", "Measurement timeline", "Health Insights", "Measurement quality & guidance details", "Technical capture details"]) {
       const heading = page.getByRole("heading", { name: title, exact: true });
       await expect(heading).toBeVisible();
       const section = heading.locator("../..");

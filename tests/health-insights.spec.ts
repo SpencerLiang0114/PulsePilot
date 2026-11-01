@@ -55,42 +55,25 @@ async function setup(page: Page, reportData: Report = report) {
   return { send, close, start: () => start };
 }
 
-test("pulse variability leads the report, survives export, and fits mobile and print", async ({ page }) => {
-  const result = {
-    status: "available" as const, method: "BVP pulse peaks; experimental PRV, not ECG HRV",
-    reason: "Longest continuous segment passing pulse-timing checks.", rmssd_ms: 100, sdnn_ms: 50.5,
-    duration: 40, interval_count: 50, rejected_intervals: 2,
-    interval_times: Array.from({ length: 50 }, (_, i) => 12 + i * .8),
-    intervals_ms: Array.from({ length: 50 }, (_, i) => i % 2 ? 850 : 750),
-  };
-  const ws = await setup(page, { ...report, mode: "camera", pulse_variability: result });
-  const region = page.getByRole("region", { name: "Pulse variability", exact: true });
-  await expect(region.getByText("100 ms", { exact: true })).toBeVisible();
-  await expect(region.getByRole("img", { name: "Pulse intervals in the analyzed continuous segment" })).toBeVisible();
-  const pulseY = (await region.boundingBox())!.y;
-  const healthY = (await page.getByRole("region", { name: "Health Insights" }).boundingBox())!.y;
+test("reports omit pulse variability and preserve health insights on mobile and print", async ({ page }) => {
+  const ws = await setup(page, { ...report, mode: "camera" });
+  await expect(page.getByRole("region", { name: "Pulse variability", exact: true })).toHaveCount(0);
+  const region = page.getByRole("region", { name: "Health Insights" });
+  const healthY = (await region.boundingBox())!.y;
   const summaryY = (await page.getByRole("heading", { name: "Recording summary & next measurement" }).boundingBox())!.y;
-  expect(pulseY).toBeLessThan(healthY);
   expect(healthY).toBeLessThan(summaryY);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON" }).click();
   const data = JSON.parse(await readFile((await (await downloadPromise).path())!, "utf8"));
-  expect(data.pulse_variability).toEqual(result);
+  expect(data).not.toHaveProperty("pulse_variability");
+  expect(data.health_insights).toEqual(bundle);
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(region.getByText("100 ms", { exact: true })).toBeVisible();
+  await expect(region.getByRole("heading", { name: "Health Insights", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: "test-results/report-without-variability-mobile.png", fullPage: true });
   await page.emulateMedia({ media: "print" });
-  await expect(region.getByRole("heading", { name: "Pulse variability", exact: true })).toBeVisible();
-  await page.screenshot({ path: "/tmp/pulsepilot-variability-mobile.png", fullPage: true });
-  ws.close();
-});
-
-test("reports missing variability explain the service mismatch without calling the measurement old", async ({ page }) => {
-  const ws = await setup(page, { ...report, mode: "recording" });
-  const region = page.getByRole("region", { name: "Pulse variability", exact: true });
-  await expect(region.getByText(/average heart-rate readings cannot reconstruct HRV/)).toBeVisible();
-  await expect(region.getByText(/measurement service did not include beat-to-beat analysis/)).toBeVisible();
-  await expect(region.getByRole("img")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Pulse variability", exact: true })).toHaveCount(0);
+  await expect(region.getByRole("heading", { name: "Health Insights", exact: true })).toBeVisible();
   ws.close();
 });
 

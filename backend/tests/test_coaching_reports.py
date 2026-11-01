@@ -55,6 +55,37 @@ def test_empty_report_has_no_fabricated_numbers():
     assert report.analyst == "deterministic"
 
 
+@pytest.mark.parametrize("mode", ["camera", "recording", "simulation"])
+def test_report_and_health_evidence_do_not_export_pulse_variability(mode):
+    from pulsepilot.reports import measurement_evidence
+
+    sample = good_sample(t=30)
+    sample.bpm, sample.usable = 72, True
+    sample.waveform, sample.waveform_times = [0, 1, 0], [29.9, 29.95, 30]
+    report = build_report(SessionConfig(mode=mode), [sample], [])
+    assert "pulse_variability" not in report.model_dump()
+    evidence = measurement_evidence(report)
+    assert "pulse_variability" not in evidence.model_dump()
+    assert "pulse_variability" not in evidence.evidence_ids
+    assert "pulse_variability" not in report.health_insights.evidence
+    assert all(i.insight_id != "pulse_variability" for i in report.health_insights.insights)
+    assert report.samples[0].waveform == report.samples[0].waveform_times == []
+
+
+def test_lower_accepted_threshold_flows_through_report_statistics():
+    gate = ReliabilityGate()
+    samples = [gate.apply(good_sample(t=12+i*.5, sqi=.45), 72, 12+i*.5) for i in range(3)]
+    samples.append(gate.apply(good_sample(t=13.5, sqi=.35), 74, 13.5))
+    samples.append(gate.apply(good_sample(t=14, sqi=.34), 120, 14))
+    report = build_report(SessionConfig(), samples, [])
+    assert report.stats.mean_bpm == report.stats.median_bpm == 73
+    assert report.stats.min_bpm == 72 and report.stats.max_bpm == 74
+    assert report.stats.usable_fraction == pytest.approx(2/5)
+    assert report.stats.stable_at == 13
+    assert "SQI >= 0.45" in report.evidence["quality"]
+    assert "SQI >= 0.35" in report.evidence["quality"]
+
+
 def test_report_excludes_invalid_estimates_and_preserves_provenance():
     samples = [good_sample(t=10), good_sample(t=11), good_sample(t=12)]
     samples[0].bpm, samples[0].usable = 70, True

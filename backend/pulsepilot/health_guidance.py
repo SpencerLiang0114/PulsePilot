@@ -13,10 +13,6 @@ REFERENCES = {
     "cdc_activity": GuidanceReference(title="CDC: Adult Activity Overview",
         url="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html"),
     "product_limits": GuidanceReference(title="PulsePilot measurement policy: unvalidated estimates; product quality gates only"),
-    "prv_research": GuidanceReference(title="Evaluation of Remote Photoplethysmography Measurement Conditions toward Telemedicine Applications",
-        url="https://pmc.ncbi.nlm.nih.gov/articles/PMC8704576/"),
-    "hrv_standards": GuidanceReference(title="ESC/NASPE: Heart rate variability — standards of measurement",
-        url="https://www.escardio.org/static-file/Escardio/Guidelines/Scientific-Statements/guidelines-Heart-Rate-Variability-FT-1996.pdf"),
 }
 URGENT_TEXT = ("You reported current chest pain, severe shortness of breath, or fainting. "
                "Seek emergency medical help now; call your local emergency number. "
@@ -38,8 +34,7 @@ class HealthEvidenceGate:
 
 def evidence_lookup(e: MeasurementEvidence) -> dict[str, str]:
     return {
-        "heart_rate": f"Accepted estimate mean {e.mean_bpm} BPM; {e.accepted_window_count} accepted windows. "
-                      "Session BPM standard deviation is not heart-rate variability (HRV).",
+        "heart_rate": f"Accepted estimate mean {e.mean_bpm} BPM; {e.accepted_window_count} accepted windows.",
         "quality": f"Usable {e.usable_fraction:.0%}; signal coverage {e.signal_coverage:.0%}; "
                    f"duration {e.duration:g} seconds. Setup warnings: {', '.join(e.quality_warnings) or 'none'}. "
                    "Product quality thresholds do not establish clinical accuracy.",
@@ -47,10 +42,6 @@ def evidence_lookup(e: MeasurementEvidence) -> dict[str, str]:
                   f"validation: {e.validation_status}.",
         "context": f"Activity context: {e.activity_context} (user-declared when provided; not inferred).",
         "symptoms": "User reported concerning symptoms." if e.concerning_symptoms else "No concerning symptoms declared; symptoms were not clinically assessed.",
-        "pulse_variability": (f"BVP pulse-rate variability: {e.pulse_variability.status}; "
-            f"RMSSD {e.pulse_variability.rmssd_ms} ms; SDNN {e.pulse_variability.sdnn_ms} ms; "
-            f"{e.pulse_variability.interval_count} intervals over {e.pulse_variability.duration:g}s. "
-            + e.pulse_variability.reason),
     }
 
 
@@ -81,14 +72,6 @@ class HealthGuidanceCatalog:
         candidates += [insight("estimate", "education", "What this estimate means",
             f"Accepted windows averaged {e.mean_bpm:g} BPM. BPM means beats per minute; this is an unconfirmed estimate, "
             "not a diagnosis or a measure of cardiovascular risk.", 2, ("heart_rate", "source"), ("aha_pulse", "product_limits"))]
-        if e.pulse_variability.status == "available":
-            candidates.append(insight("pulse_variability", "education", "Your beat-to-beat variation",
-                f"Your pulse intervals had an RMSSD of {e.pulse_variability.rmssd_ms:g} ms across "
-                f"{e.pulse_variability.duration:g} continuous seconds. RMSSD describes how much successive "
-                "pulse intervals differ. Natural beat-to-beat variation relates to autonomic regulation, "
-                "but this camera estimate cannot tell whether you are stressed, recovered, or healthy. "
-                "Build a personal baseline with comparable resting recordings rather than treating one value as a score.",
-                3, ("pulse_variability", "context", "source"), ("prv_research", "hrv_standards", "product_limits")))
         if e.activity_context == "resting":
             candidates.append(insight("resting", "education", "Resting context was provided",
                 "You described this session as resting. Resting pulse refers to a calm, non-exercising state. "
@@ -115,7 +98,7 @@ class HealthGuidanceCatalog:
                       "Device provenance alone does not establish clinical validation. ")
         result = [insight("accuracy", "limitation", "Accuracy and interpretation limits",
             "Signal quality does not prove measurement accuracy or health. " + validation +
-            "Session BPM standard deviation is not HRV. No diagnosis, disease-risk estimate, or medication advice is provided.",
+            "No diagnosis, disease-risk estimate, or medication advice is provided.",
             0, ("source", "quality", "heart_rate"))]
         if e.activity_context == "unknown":
             result.append(insight("unknown_context", "limitation", "Activity context is unknown",

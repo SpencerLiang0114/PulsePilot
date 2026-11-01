@@ -14,7 +14,6 @@ from .schemas import (
     Statistics,
 )
 from .sensing import ACTIONS, THRESHOLDS, issues
-from .variability import pulse_variability
 
 
 def statement(text: str, evidence: str, kind="fact") -> Statement:
@@ -56,7 +55,11 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
                        f"range {stats.min_bpm}–{stats.max_bpm} BPM; {len(accepted)} accepted windows.")
                       if accepted else "No usable heart-rate windows; no average or range can be reported.",
         "quality": (f"Mean periodicity SQI {stats.mean_sqi}; usable {stats.usable_fraction:.1%}; "
-                    f"signal coverage {stats.signal_coverage:.1%}. SQI is not an accuracy probability."),
+                    f"signal coverage {stats.signal_coverage:.1%}. Accepted readings require three consecutive "
+                    f"windows at SQI >= {THRESHOLDS.sqi_enter}, then remain accepted at SQI >= "
+                    f"{THRESHOLDS.sqi_exit}, with capture rate >= {THRESHOLDS.min_fps:g} fps and valid "
+                    "camera conditions and freshness. Usable fraction includes startup and missing signal. "
+                    "SQI is not an accuracy probability."),
         "camera": (f"Single-face tracking {stats.tracking_fraction:.1%}; lighting issues {lighting:.1%}; "
                    f"motion issues {motion:.1%}; alignment issues {alignment:.1%}. "
                    "Visibility and pose use six-landmark proxies, not full occlusion detection."),
@@ -158,7 +161,6 @@ def build_report(config: SessionConfig, samples: list[Sample], interventions: li
         samples=[s.model_copy(update={"waveform": [], "waveform_times": []}) for s in samples],
         interventions=[i.model_copy(deep=True) for i in interventions], evidence=evidence,
         analysis=analysis, claims=claims, health_context=config.health_context,
-        pulse_variability=pulse_variability(samples, config.mode),
     )
 
     from .health_guidance import render_health_bundle
@@ -181,6 +183,5 @@ def measurement_evidence(report: Report) -> MeasurementEvidence:
         accepted_window_count=sum(s.usable and s.bpm is not None for s in report.samples),
         quality_warnings=warnings, activity_context=report.health_context.activity,
         concerning_symptoms=report.health_context.concerning_symptoms,
-        evidence_ids=("heart_rate", "quality", "source", "context", "symptoms", "pulse_variability"),
-        pulse_variability=report.pulse_variability,
+        evidence_ids=("heart_rate", "quality", "source", "context", "symptoms"),
     )
