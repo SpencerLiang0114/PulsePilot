@@ -1,6 +1,6 @@
 # PulsePilot
 
-Built for the **Meta Global AI Developer Hackathon**. [Try the live demo](https://pulsepilot-xi.vercel.app).
+Built for the **Meta Global AI Developer Hackathon**.
 
 PulsePilot is a research prototype that estimates your heart rate from webcam video and helps you understand the quality of each measurement. It combines the pretrained FacePhys model with live guidance on lighting, movement, and face position, then produces a report of heart-rate trends, signal quality, and the adjustments made during the session.
 
@@ -179,7 +179,7 @@ Open [the container demo](http://localhost:8080). Compose defaults to `AGENT_MOD
 
 For a separate frontend host, build with `NEXT_PUBLIC_BACKEND_URL=https://your-inference-host` and set the backend's exact HTTPS `ALLOWED_ORIGINS`. Serve the backend over HTTPS/WSS and use one Uvicorn worker. Keep physiological inference in the persistent Python service.
 
-The live demo uses Vercel for the frontend and Modal for inference. [backend/modal_app.py](backend/modal_app.py) reuses the backend Dockerfile with four CPU cores, 4 GiB RAM, and one container maximum. It scales to zero when idle, so a first measurement may take about a minute to initialize. Production is public; Vercel previews remain protected.
+Hosted deployments are disabled. The repository retains configuration for a Vercel frontend and Modal inference service. [backend/modal_app.py](backend/modal_app.py) reuses the backend Dockerfile with four CPU cores, 4 GiB RAM, and one container maximum. When deployed, it scales to zero when idle, so a first measurement may take about a minute to initialize.
 
 To deploy the backend, install `modal==1.6.3` in a separate Python 3.12 environment, authenticate with Modal, and export `ALLOWED_ORIGINS` plus any server-only model configuration into the deployment process. Run `modal deploy backend/modal_app.py` from the repository root. The entry point forwards only `MODEL_API_KEY`, `META_MODEL`, `AGENT_MODE`, and `ALLOWED_ORIGINS`; deployment tokens stay outside the hosted service. Local `backend/.env` values are not automatically loaded by the deployment command.
 
