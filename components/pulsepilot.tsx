@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Activity, ArrowRight, Camera, Check, ChevronRight, CircleHelp, Clock3, FileText,
-  FlaskConical, Focus, Heart, Lightbulb, LoaderCircle, LockKeyhole, Maximize,
+  FlaskConical, Focus, Heart, Lightbulb, LoaderCircle, LockKeyhole, Maximize, MicOff,
   Play, Plus, RotateCcw, ShieldCheck, Sparkles, Square, Sun, Waves, X,
 } from "lucide-react";
 import { useMeasurement } from "@/lib/use-measurement";
@@ -214,18 +214,18 @@ export function PulsePilot() {
         </>)}
         {view === "about" && <div className="about-view">
           <header className="about-hero">
-            <div className="about-hero-copy"><h1>How PulsePilot works.</h1><p className="about-lead">A camera. A subtle signal.<br />A clearer view of your recording.</p><p>PulsePilot is a research prototype that estimates your heart rate from webcam video, with live guidance and a report that explains the quality of each recording.</p><a className="about-hero-link" href="#measurement-title">Follow the signal<ArrowRight size={18} aria-hidden="true" /></a></div>
-            <figure className="about-visual"><div className="about-face"><FaceGuide active /></div><div className="about-signal"><ArrowRight size={24} aria-hidden="true" /><Waves size={64} strokeWidth={1.2} aria-hidden="true" /></div><figcaption>Facial video to pulse waveform<span>Illustration of the sensing process</span></figcaption></figure>
+            <div className="about-hero-copy"><p className="about-eyebrow"><span aria-hidden="true" />Research prototype</p><h1>How PulsePilot works.</h1><p className="about-lead">A camera. A subtle signal.<br />A clearer view of your recording.</p><p>PulsePilot is a research prototype that estimates your heart rate from webcam video, with live guidance and a report that explains the quality of each recording.</p><div className="about-hero-actions"><button className="primary" onClick={reset}>Start a measurement<ArrowRight size={16} aria-hidden="true" /></button><a className="about-hero-link" href="#measurement-title">Follow the signal<ArrowRight size={18} aria-hidden="true" /></a></div><ul className="about-trust"><li><LockKeyhole size={14} aria-hidden="true" />Frames processed, never saved</li><li><MicOff size={14} aria-hidden="true" />Audio is never captured</li><li><ShieldCheck size={14} aria-hidden="true" />For curiosity, not diagnosis</li></ul></div>
+            <figure className="about-visual"><div className="about-face"><FaceGuide active /></div><ArrowRight className="about-visual-arrow" size={22} aria-hidden="true" /><div className="about-signal"><svg className="about-wave" viewBox="0 0 220 72" fill="none" aria-hidden="true"><path className="about-wave-grid" d="M0 18h220M0 36h220M0 54h220" /><path className="about-wave-trace" d="M2 38c10 0 12-2 18-2 8 0 9 14 15 14s7-30 13-30 6 22 12 22 6-6 14-6 10 2 16 2 8-12 14-12 7 26 13 26 6-20 12-20 6 4 14 4 10-2 16-2 8 10 14 10 7-24 13-24 6 18 12 18 6-4 12-4" /></svg><div className="about-readout"><span>Estimated heart rate</span><strong>72.4<small>BPM</small></strong><span className="about-readout-state"><span aria-hidden="true" />Signal settling</span></div></div><figcaption>Facial video to pulse waveform<span>Illustration of the sensing process — not a real reading</span></figcaption></figure>
           </header>
-          <nav className="about-nav" aria-label="On this page"><span>On this page</span><a href="#measurement-title">The measurement</a><a href="#agents-title">AI guidance</a><a href="#facephys-title">FacePhys model</a><a href="#limits-title">Limitations</a></nav>
-          <section className="about-intro" aria-labelledby="measurement-title"><div><h2 id="measurement-title">From camera video to pulse estimates.</h2><p>With each heartbeat, subtle changes in blood volume affect the light reflected by your face. FacePhys looks for that pattern in camera frames to estimate your pulse.</p></div><ol className="about-steps">
+          <nav className="about-nav" aria-label="On this page"><span>On this page</span><a href="#measurement-title">The measurement</a><a href="#architecture-title">Architecture</a><a href="#agents-title">AI guidance</a><a href="#facephys-title">FacePhys model</a><a href="#limits-title">Limitations</a></nav>
+          <section className="about-intro" aria-labelledby="measurement-title"><div className="about-section-heading"><p className="about-eyebrow">01 · The measurement</p><h2 id="measurement-title">From camera video to pulse estimates.</h2><p>With each heartbeat, subtle changes in blood volume affect the light reflected by your face. FacePhys looks for that pattern in camera frames to estimate your pulse.</p></div><ol className="about-steps">
             <li><span aria-hidden="true">01</span><div><h3>Capture the signal</h3><p>Your webcam captures facial video. FacePhys extracts a pulse waveform from those frames.</p></div></li>
             <li><span aria-hidden="true">02</span><div><h3>Improve the recording</h3><p>Lighting, motion, and camera timing all matter. PulsePilot offers one correction at a time and compares the signal before and after you adjust.</p></div></li>
             <li><span aria-hidden="true">03</span><div><h3>Review the evidence</h3><p>Your session report brings together heart-rate estimates, signal quality, and recorded adjustments.</p></div></li>
           </ol></section>
           <section className="about-section" aria-labelledby="architecture-title">
-            <h2 id="architecture-title">The architecture at a glance.</h2>
-            <p>The React / Next.js workspace handles capture, live charts, and report export. A WebSocket connects it to a persistent Python / FastAPI service for sensing and session control.</p>
+            <div className="about-section-heading"><p className="about-eyebrow">02 · Architecture</p><h2 id="architecture-title">The architecture at a glance.</h2></div>
+            <p className="about-section-lead">The React / Next.js workspace handles capture, live charts, and report export. A WebSocket connects it to a persistent Python / FastAPI service for sensing and session control.</p>
             <figure className="architecture-diagram">
               <figcaption>Continuous measurement</figcaption>
               <ol className="architecture-flow">{[
@@ -249,8 +249,8 @@ export function PulsePilot() {
             </figure>
           </section>
           <section className="about-section about-agents" aria-labelledby="agents-title">
-            <h2 id="agents-title">How the agentic system works.</h2>
-            <p>Three LangGraph workflows coordinate Meta Muse Spark assistance. Each has a defined task, a server validation step, and a deterministic fallback.</p>
+            <div className="about-section-heading"><p className="about-eyebrow">03 · AI guidance</p><h2 id="agents-title">How the agentic system works.</h2></div>
+            <p className="about-section-lead">Three LangGraph workflows coordinate Meta Muse Spark assistance. Each has a defined task, a server validation step, and a deterministic fallback.</p>
             <dl className="agent-workflows">
               <div><dt><Focus size={24} aria-hidden="true" />Measurement coach</dt><dd>Uses lighting, motion, face position, and recent adjustment outcomes. In the default assist mode, rules choose the action and Muse can explain it. Adaptive mode lets Muse propose a choice from the currently eligible actions.</dd></div>
               <div><dt><FileText size={24} aria-hidden="true" />Session analyst</dt><dd>Selects report claims tied to measured statistics and recorded adjustments. The server checks each claim against its evidence and renders the factual text.</dd></div>
@@ -259,8 +259,8 @@ export function PulsePilot() {
             <p className="architecture-note">The server controls measurement thresholds and adjustment timing. Invalid or late AI responses fall back to rules. The numerical report arrives before optional AI analysis, and sensing, coaching, and reports remain available when AI is unavailable.</p>
           </section>
           <section className="about-section" aria-labelledby="facephys-title">
-            <h2 id="facephys-title">Inside the FacePhys model.</h2>
-            <p>FacePhys learns an evolving pulse state from facial video. Its temporal-spatial state-space duality combines 2D convolutions for spatial features with a state-space model for changes over time.</p>
+            <div className="about-section-heading"><p className="about-eyebrow">04 · FacePhys model</p><h2 id="facephys-title">Inside the FacePhys model.</h2></div>
+            <p className="about-section-lead">FacePhys learns an evolving pulse state from facial video. Its temporal-spatial state-space duality combines 2D convolutions for spatial features with a state-space model for changes over time.</p>
             <figure className="architecture-diagram model-diagram">
               <figcaption>Simplified streaming model</figcaption>
               <ol className="architecture-flow model-flow">{[
