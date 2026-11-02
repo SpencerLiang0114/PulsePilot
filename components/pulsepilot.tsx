@@ -130,7 +130,7 @@ export function PulsePilot() {
     <div className="workspace">
       <main id="main-content" className={view === "measure" ? "measurement-main" : undefined} tabIndex={-1}>
         {view === "measure" && <>
-          <div className="page-heading"><div><h1>Estimate your heart rate with your webcam.</h1><p>Get live guidance to improve your signal, then review your heart-rate trends, measurement quality, and session insights.</p></div>
+          <div className="page-heading"><div><h1>Estimate your heart rate with your webcam.</h1></div>
             <button className="service-indicator" onClick={() => void m.refreshHealth()} title="Refresh service status"><span className={m.health ? "online" : ""} />{m.health ? m.health.model_ready ? "Inference ready" : "Service connected" : "Service offline"}<RotateCcw size={12} /></button>
           </div>
           {m.error && <div className="error-banner" role="alert"><div><strong>Let’s get you connected.</strong><p>{m.error}</p></div><button className="secondary small" onClick={() => startSetup(m.mode)}>Try again</button></div>}
@@ -151,8 +151,8 @@ export function PulsePilot() {
                 {liveVideo && showHeatmap && m.heatmap && (camera?.face_count ?? 0) <= 1 &&
                   <FaceHeatmap heatmap={m.heatmap} captureSize={m.captureSize} mirrored={m.mode === "camera"} />}
                 {liveVideo && camera?.face_visible && faceBox && <svg className={`face-overlay ${m.mode === "camera" ? "mirrored" : ""}`} viewBox={`0 0 ${m.captureSize.width} ${m.captureSize.height}`} preserveAspectRatio="xMidYMid meet" aria-label="Detected face" role="img">
-                  <rect x={faceBox[0] * m.captureSize.width} y={faceBox[1] * m.captureSize.height} width={(faceBox[2] - faceBox[0]) * m.captureSize.width} height={(faceBox[3] - faceBox[1]) * m.captureSize.height} rx={showHeatmap && m.heatmap ? 0 : 12} fill="none" stroke={showHeatmap && m.heatmap ? "#ff3020" : current?.usable ? "#75e1cf" : "#ffffff"} strokeWidth={showHeatmap && m.heatmap ? 2 : 1.5} />
-                  {camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="#b9f1e6" />)}
+                  <rect x={faceBox[0] * m.captureSize.width} y={faceBox[1] * m.captureSize.height} width={(faceBox[2] - faceBox[0]) * m.captureSize.width} height={(faceBox[3] - faceBox[1]) * m.captureSize.height} rx={showHeatmap && m.heatmap ? 0 : 12} fill="none" stroke={showHeatmap && m.heatmap ? "#ff3020" : current?.usable ? "var(--accent-light)" : "#ffffff"} strokeWidth={showHeatmap && m.heatmap ? 2 : 1.5} />
+                  {camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="var(--accent-light)" />)}
                 </svg>}
                 <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Face your camera.<br />We’ll guide you from there.</p><span className="preview-caption"><Focus size={13} />Illustrative preview</span></>}
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}

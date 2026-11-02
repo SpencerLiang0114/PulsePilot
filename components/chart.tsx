@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 
-export function Chart({ values, preliminary, times, label, color = "#168286", height = 110, domain, unit = "", showScale = false, empty = "Your signal will appear here" }: {
+export function Chart({ values, preliminary, times, label, color = "var(--accent)", height = 110, domain, unit = "", showScale = false, empty = "Your signal will appear here" }: {
   values: (number | null)[]; times?: number[]; label: string; color?: string; height?: number;
   preliminary?: (number | null)[];
   domain?: [number, number]; unit?: string; showScale?: boolean; empty?: string;
@@ -27,7 +27,7 @@ export function Chart({ values, preliminary, times, label, color = "#168286", he
         setHover(values.length ? values.reduce<number>((nearest, _, i) =>
           Math.abs(x(i) - position) < Math.abs(x(nearest) - position) ? i : nearest, 0) : null);
       }}>
-      <defs><pattern id={id} width="60" height="28" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 28" fill="none" stroke="#e6edf0" strokeWidth="1" /></pattern></defs>
+      <defs><pattern id={id} width="60" height="28" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 28" fill="none" stroke="var(--line)" strokeWidth="1" /></pattern></defs>
       <rect width="100%" height="100%" fill={`url(#${id})`} />
       {series.map(series => {
         let pen = false;

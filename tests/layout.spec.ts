@@ -75,3 +75,16 @@ for (const viewport of [{ width: 1258, height: 902 }, { width: 1280, height: 800
     await expectWorkspaceToFit(page);
   });
 }
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1040, height: 720 }, { width: 1280, height: 900 }]) {
+  test(`header height stays consistent across views at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const measureHeight = await page.locator(".sidebar").evaluate(element => element.getBoundingClientRect().height);
+    for (const name of ["Session reports", "How it works"]) {
+      await page.getByRole("button", { name, exact: true }).click();
+      expect(await page.locator(".sidebar").evaluate(element => element.getBoundingClientRect().height)).toBe(measureHeight);
+    }
+    if (viewport.width >= 1000) expect(measureHeight).toBe(84);
+  });
+}
