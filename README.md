@@ -8,6 +8,8 @@ Optional Meta Muse Spark assistance runs through three LangGraph workflows: meas
 
 ## Demo
 
+**[Watch the demo video on YouTube](https://www.youtube.com/watch?v=GlPp62MaJW0)**
+
 ![PulsePilot measurement start page with a 60-second guided session and measurement coach](docs/images/demo-measure-start.webp)
 
 *Start a guided webcam measurement. The coach checks face position, lighting, and head movement before and during the session.*
