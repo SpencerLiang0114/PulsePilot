@@ -139,7 +139,7 @@ export function PulsePilot() {
             <div className="capture-column">
               <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
               <div ref={captureRef} className={`capture-stage ${!busy ? "has-demo" : ""} ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
-                {!busy && <div className="camera-demo"><Image src="/images/pulsepilot-preview.webp" alt="Illustrative portrait with subtle facial landmarks showing webcam sensing" fill sizes="(max-width: 520px) 650px, (max-width: 1100px) 860px, 70vw" loading="eager" /></div>}
+                {!busy && <div className="camera-demo"><Image src="/images/pulsepilot-preview-sage.webp" alt="Illustrative portrait with subtle facial landmarks showing webcam sensing" fill sizes="(max-width: 520px) 650px, (max-width: 1100px) 860px, 70vw" loading="eager" /></div>}
                 <video ref={m.videoRef} playsInline muted className={`${m.mode === "camera" ? "mirrored" : ""} ${liveVideo ? "visible" : ""}`} aria-label="Live camera or recording preview" />
                 <div className="camera-top"><span className="camera-badge"><span className={measuring ? "live-dot" : "off-dot"} />{measuring ? sources[m.mode] : m.status === "connecting" ? "Connecting" : "Camera off"}</span>
                   <button className="camera-expand" aria-label="Expand camera preview" onClick={() => {

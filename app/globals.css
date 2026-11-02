@@ -42,11 +42,13 @@ main { max-width:var(--page-width); margin:auto; padding:42px var(--page-gutter)
 .camera-shell-heading > span:last-child { color:#bdd3c8; font-size:12px; }
 .capture-stage { position:relative; height:368px; background:var(--surface-dark); overflow:hidden; isolation:isolate; }
 .camera-demo { position:absolute; inset:0; overflow:hidden; }
-.camera-demo img { object-fit:cover; object-position:center 43%; filter:blur(5px) grayscale(1); transform:scale(1.04); }
-.camera-demo::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent 35%,#173f3530 48%,var(--surface-dark) 65%); }
+.has-demo { --preview-background:#dce8dc; background:var(--preview-background); }
+.camera-demo img { object-fit:cover; object-position:center 43%; filter:blur(5px); transform:scale(1.04); }
+.camera-demo::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent 35%,#dce8dc30 48%,var(--preview-background) 65%); }
 .has-demo .camera-center-copy { left:55%; right:5%; top:50%; transform:translateY(-50%); }
-.has-demo .camera-center-copy h2 { font-size:28px; line-height:1.3; }
-.has-demo .camera-center-copy p { font-size:13px; margin-top:16px; }
+.has-demo .camera-center-copy h2 { font-size:28px; line-height:1.3; color:var(--surface-dark); }
+.has-demo .camera-center-copy p { font-size:13px; margin-top:16px; color:var(--accent-hover); }
+.has-demo .preview-caption,.has-demo .camera-bottom { color:var(--accent-hover); }
 .preview-caption { display:inline-flex; align-items:center; gap:6px; margin-top:24px; color:#c6ddd2; font-size:12px; }
 .capture-stage.is-measuring:has(video.visible) { width:100%; height:auto; aspect-ratio:4/3; min-height:420px; }
 .capture-stage video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; background:#102e27; }
@@ -450,7 +452,7 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .has-demo { height:400px; }
   .camera-demo { height:250px; bottom:auto; }
   .camera-demo img { object-position:4% center; }
-  .camera-demo::after { background:linear-gradient(180deg,transparent 45%,#173f3580 70%,var(--surface-dark) 100%); }
+  .camera-demo::after { background:linear-gradient(180deg,transparent 45%,#dce8dc80 70%,var(--preview-background) 100%); }
   .has-demo .camera-center-copy { left:20px; right:20px; top:auto; bottom:56px; transform:none; }
   .has-demo .camera-center-copy h2 { font-size:22px; }
   .has-demo .camera-bottom span:last-child { display:none; }
