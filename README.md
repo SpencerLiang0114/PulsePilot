@@ -6,6 +6,20 @@ PulsePilot is a research prototype that estimates your heart rate from webcam vi
 
 Optional Meta Muse Spark assistance runs through three LangGraph workflows: measurement coaching, session analysis, and Health Insights. The sensing pipeline and numerical reports run independently of those model requests, so a slow or unavailable AI service does not stop measurement.
 
+## Demo
+
+![PulsePilot measurement start page with a 60-second guided session and measurement coach](docs/images/demo-measure-start.webp)
+
+*Start a guided webcam measurement. The coach checks face position, lighting, and head movement before and during the session.*
+
+![Live PulsePilot measurement showing a 65.3 BPM estimate, FacePhys face heatmap, 83% signal quality, and live pulse waveform](docs/images/demo-live-measurement.webp)
+
+*Live measurement with the FacePhys attention heatmap, estimated heart rate, signal quality, coaching feedback, and pulse waveform.*
+
+![PulsePilot session report showing a 63.2 BPM average estimated heart rate, median, observed range, and Health Insights](docs/images/demo-session-report.webp)
+
+*Session report with accepted heart-rate statistics, measurement quality, and Health Insights. Exportable as JSON or printable.*
+
 ## What you can do
 
 - **Measure with your webcam.** Follow a guided session with an estimated heart rate, a live pulse waveform, and feedback on capture conditions.
