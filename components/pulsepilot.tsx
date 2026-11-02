@@ -116,7 +116,7 @@ export function PulsePilot() {
       measuring ? "Face the camera and hold still while we find your pulse signal." :
         "Good measurements start with a comfortable setup.");
 
-  return <div className="app-shell">
+  return <div className={`app-shell ${view === "measure" ? "measurement-view" : ""}`}>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="sidebar">
       <Brand />
@@ -128,7 +128,7 @@ export function PulsePilot() {
       <span className="research-badge"><span />Research preview</span>
     </header>
     <div className="workspace">
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" className={view === "measure" ? "measurement-main" : undefined} tabIndex={-1}>
         {view === "measure" && <>
           <div className="page-heading"><div><h1>Estimate your heart rate with your webcam.</h1><p>Get live guidance to improve your signal, then review your heart-rate trends, measurement quality, and session insights.</p></div>
             <button className="service-indicator" onClick={() => void m.refreshHealth()} title="Refresh service status"><span className={m.health ? "online" : ""} />{m.health ? m.health.model_ready ? "Inference ready" : "Service connected" : "Service offline"}<RotateCcw size={12} /></button>
