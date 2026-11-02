@@ -136,6 +136,7 @@ export function PulsePilot() {
           {m.mode === "simulation" && busy && <div className="simulation-banner"><FlaskConical size={17} /><strong>Simulation · {m.playbackRate}× playback</strong> Synthetic values to explore the experience. No camera or physiological measurement.</div>}
           <div className="measurement-grid">
             <div className="capture-column">
+             <div className="capture-shell">
               <div className="camera-shell-heading"><span><Camera size={16} />PulsePilot live measurement</span><span>{busy ? sources[m.mode] : "Camera preview"}</span></div>
               <div ref={captureRef} className={`capture-stage ${!busy ? "has-demo" : ""} ${measuring ? "is-measuring" : ""} ${current?.usable ? "is-stable" : ""}`}>
                 {!busy && <div className="camera-demo"><Image src="/images/pulsepilot-preview-sage.webp" alt="Illustrative portrait with subtle facial landmarks showing webcam sensing" fill sizes="(max-width: 520px) 650px, (max-width: 1100px) 860px, 70vw" loading="eager" /></div>}
@@ -168,10 +169,6 @@ export function PulsePilot() {
                 </>}
                 <div className="camera-bottom"><span><LockKeyhole size={13} />Frames processed, never saved</span><span>{measuring ? `${Math.round(current?.fps ?? 0)} fps` : m.status === "connecting" ? "Preparing camera" : "Camera permission required"}</span></div>
               </div>
-              {liveVideo && <div className="camera-signal">
-                <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>
-                <PulseWaveform sample={current} active={measuring} label="Pulse waveform below camera preview" />
-              </div>}
               <div className="capture-controls">
                 <div className="session-length"><Clock3 size={17} /><span>{busy ? <><strong>{clockText(current?.t ?? m.history.at(-1)?.t ?? 0)}</strong> / {clockText(m.duration)}</> : <><strong>60 second</strong> guided session</>}</span></div>
                 <div className="control-buttons">{measuring ? <>
@@ -181,10 +178,11 @@ export function PulsePilot() {
                   <button className="primary" onClick={() => startSetup("camera")}><Camera size={17} />Start measurement</button>}</div>
               </div>
               {busy && <div className="session-progress" role="progressbar" aria-label="Measurement progress" aria-valuenow={Math.round(current?.t ?? 0)} aria-valuemin={0} aria-valuemax={m.duration}><span style={{ width: `${Math.min(100, (current?.t ?? m.history.at(-1)?.t ?? 0) / m.duration * 100)}%` }} /></div>}
-              {!liveVideo && <section className="waveform-panel"><div className="section-heading"><h3><Waves size={17} />Your pulse waveform</h3><span>{current?.waveform.length ? "BVP · normalized" : "Waiting for signal"}</span></div>
-                <PulseWaveform sample={current} active={measuring} playbackRate={m.playbackRate} label="Live FacePhys blood volume pulse waveform" />
-                <div className="waveform-footer"><span>Recent 8 seconds</span><span><span className={`mini-dot ${current?.usable ? "good" : ""}`} />{current?.state ?? "Ready when you are"}</span></div>
-              </section>}
+              {liveVideo && <div className="camera-signal">
+                <div className="camera-signal-heading"><span><Waves size={14} />Live pulse waveform</span><span>{Math.max(0, Math.ceil(m.duration - (current?.t ?? 0)))}s remaining</span></div>
+                <PulseWaveform sample={current} active={measuring} label="Pulse waveform below camera preview" />
+              </div>}
+             </div>
             </div>
             <div className="insight-column">
               <section className="heart-panel"><div className="section-heading"><h3>Estimated heart rate</h3><Heart size={19} /></div>
@@ -202,6 +200,10 @@ export function PulsePilot() {
               </section>
               <section className="conditions-panel"><h3>Your setup</h3>{conditions.map(({ title, icon: Icon, value, good }) => <div className="condition" key={title}><span><Icon size={16} />{title}</span><span className={good ? "condition-good" : current ? "condition-adjust" : ""}>{good && <Check size={13} />}{value}</span></div>)}</section>
             </div>
+            {!liveVideo && <section className="waveform-panel"><div className="section-heading"><h3><Waves size={17} />Your pulse waveform</h3><span>{current?.waveform.length ? "BVP · normalized" : "Waiting for signal"}</span></div>
+              <PulseWaveform sample={current} active={measuring} playbackRate={m.playbackRate} label="Live FacePhys blood volume pulse waveform" />
+              <div className="waveform-footer"><span>Recent 8 seconds</span><span><span className={`mini-dot ${current?.usable ? "good" : ""}`} />{current?.state ?? "Ready when you are"}</span></div>
+            </section>}
           </div>
           <div className="measurement-footnote"><span>Powered by FacePhys</span></div>
           <input type="file" ref={fileRef} accept="video/*" hidden aria-label="Choose recorded video" onChange={e => { const selected = e.target.files?.[0]; if (selected) { setFile(selected); startSetup("recording"); } e.target.value = ""; }} />
