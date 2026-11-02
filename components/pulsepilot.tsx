@@ -125,7 +125,6 @@ export function PulsePilot() {
         <button aria-current={view === "reports" ? "page" : undefined} className={view === "reports" ? "nav-item selected" : "nav-item"} onClick={() => go("reports")} disabled={busy}><FileText size={18} />Session reports{reports.length > 0 && <span className="nav-count">{reports.length}</span>}</button>
         <button aria-current={view === "about" ? "page" : undefined} className={view === "about" ? "nav-item selected" : "nav-item"} onClick={() => go("about")} disabled={busy}><CircleHelp size={18} />How it works</button>
       </nav>
-      <span className="research-badge"><span />Research preview</span>
     </header>
     <div className="workspace">
       <main id="main-content" className={view === "measure" ? "measurement-main" : undefined} tabIndex={-1}>
@@ -154,7 +153,7 @@ export function PulsePilot() {
                   <rect x={faceBox[0] * m.captureSize.width} y={faceBox[1] * m.captureSize.height} width={(faceBox[2] - faceBox[0]) * m.captureSize.width} height={(faceBox[3] - faceBox[1]) * m.captureSize.height} rx={showHeatmap && m.heatmap ? 0 : 12} fill="none" stroke={showHeatmap && m.heatmap ? "#ff3020" : current?.usable ? "var(--accent-light)" : "#ffffff"} strokeWidth={showHeatmap && m.heatmap ? 2 : 1.5} />
                   {camera.landmarks.map((p, i) => <circle key={i} cx={p[0] * m.captureSize.width} cy={p[1] * m.captureSize.height} r="2" fill="var(--accent-light)" />)}
                 </svg>}
-                <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><p>Face your camera.<br />We’ll guide you from there.</p><span className="preview-caption"><Focus size={13} />Illustrative preview</span></>}
+                <div className="camera-center-copy">{!busy && <><h2>A small pause.<br />A pulse of insight.</h2><span className="preview-caption"><Focus size={13} />Illustrative preview</span></>}
                   {m.status === "connecting" && <div className="initializing"><LoaderCircle className="spin" size={23} /><span>Preparing your measurement</span></div>}
                 </div>
                 {liveVideo && <>
@@ -191,12 +190,12 @@ export function PulsePilot() {
               <section className="heart-panel"><div className="section-heading"><h3>Estimated heart rate</h3><Heart size={19} /></div>
                 <div className="heart-value">{displayedBpm ?? <span className="empty-dash">—</span>}<span>BPM</span></div>
                 <div className={`measurement-state ${(current?.display_state ? current.display_state.startsWith("10s window") : current?.usable) ? "good" : ""}`}><span />{readingState ?? (m.status === "connecting" ? "Initializing" : "Not measuring")}</div>
-                <div className="quality-meter"><div><span>Signal quality</span><strong>{percent(current?.sqi)}</strong></div><div className="meter-track"><span style={{ width: `${(current?.sqi ?? 0) * 100}%` }} /></div><p>{current?.sqi != null ? "Signal periodicity, not an accuracy score." : "We’ll show a number when there’s enough usable signal."}</p></div>
+                <div className="quality-meter"><div><span>Signal quality</span><strong>{percent(current?.sqi)}</strong></div><div className="meter-track"><span style={{ width: `${(current?.sqi ?? 0) * 100}%` }} /></div>{current?.sqi != null && <p>Signal periodicity, not an accuracy score.</p>}</div>
               </section>
               <section className="coach-panel"><div className="section-heading"><h3><Sparkles className="coach-symbol" size={18} />Your measurement coach</h3><span className="live-label">{measuring ? m.coachingMode === "passive" ? "Passive" : m.coachingState.toLowerCase() : "Ready"}</span></div>
                 <h2 aria-live="polite">{guideMessage}</h2>
                 {active && <small>{decisionLabel(active)}</small>}
-                <p>{active?.explanation ?? (active ? "We’ll compare the signal before and after this adjustment." : "Sit at ease. Keep the light in front of you. We’ll help with the rest.")}</p>
+                {active && <p>{active.explanation ?? "We’ll compare the signal before and after this adjustment."}</p>}
                 {active ? <div className="intervention-status"><LoaderCircle size={14} className="spin" /><span>{m.coachingState === "ACTING" ? "Time to make your adjustment" : "Comparing measurement conditions after your adjustment"}</span></div> :
                   lastIntervention ? <div className="intervention-status"><Check size={15} /><span>{lastIntervention.outcome === "improved" ? `Periodicity improved by ${Math.round((lastIntervention.delta ?? 0) * 100)} points` : `Last adjustment: ${lastIntervention.outcome}`}</span></div> :
                     <div className="coach-footnote"><ShieldCheck size={14} />One useful adjustment at a time</div>}
@@ -204,7 +203,7 @@ export function PulsePilot() {
               <section className="conditions-panel"><h3>Your setup</h3>{conditions.map(({ title, icon: Icon, value, good }) => <div className="condition" key={title}><span><Icon size={16} />{title}</span><span className={good ? "condition-good" : current ? "condition-adjust" : ""}>{good && <Check size={13} />}{value}</span></div>)}</section>
             </div>
           </div>
-          <div className="measurement-footnote"><ShieldCheck size={14} /><p>For curiosity, not diagnosis. Signal quality does not guarantee heart-rate accuracy.</p><span>Powered by FacePhys</span></div>
+          <div className="measurement-footnote"><span>Powered by FacePhys</span></div>
           <input type="file" ref={fileRef} accept="video/*" hidden aria-label="Choose recorded video" onChange={e => { const selected = e.target.files?.[0]; if (selected) { setFile(selected); startSetup("recording"); } e.target.value = ""; }} />
         </>}
         {view === "reports" && (selected ? <ReportView report={selected} onBack={() => setSelectedReport(null)} onNew={reset} /> : <>
