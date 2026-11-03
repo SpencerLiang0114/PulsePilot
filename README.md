@@ -14,7 +14,7 @@ Optional Meta Muse Spark assistance runs through three LangGraph workflows: meas
 
 *Start a guided webcam measurement. The coach checks face position, lighting, and head movement before and during the session.*
 
-![Live PulsePilot measurement showing a 65.3 BPM estimate, FacePhys face heatmap, 83% signal quality, and live pulse waveform](docs/images/demo-live-measurement.webp)
+![Animated live PulsePilot measurement showing the FacePhys face heatmap, estimated heart rate, signal quality, and pulse waveform](docs/images/demo-live-measurement.gif)
 
 *Live measurement with the FacePhys attention heatmap, estimated heart rate, signal quality, coaching feedback, and pulse waveform.*
 
